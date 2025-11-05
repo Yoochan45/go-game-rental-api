@@ -1,0 +1,49 @@
+package dto
+
+import (
+	"github.com/Yoochan45/go-game-rental-api/internal/model"
+)
+
+type CategoryDTO struct {
+	ID          uint    `json:"id"`
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
+	IsActive    bool    `json:"is_active"`
+	GameCount   int64   `json:"game_count,omitempty"`
+}
+
+type CreateCategoryRequest struct {
+	Name        string `json:"name" validate:"required,min=2,max=100"`
+	Description string `json:"description,omitempty"`
+}
+
+type UpdateCategoryRequest struct {
+	Name        string `json:"name" validate:"required,min=2,max=100"`
+	Description string `json:"description,omitempty"`
+}
+
+type CategoryListResponse struct {
+	Categories []*CategoryDTO `json:"categories"`
+	TotalCount int64          `json:"total_count"`
+}
+
+func ToCategoryDTO(category *model.Category) *CategoryDTO {
+	if category == nil {
+		return nil
+	}
+
+	return &CategoryDTO{
+		ID:          category.ID,
+		Name:        category.Name,
+		Description: category.Description,
+		IsActive:    category.IsActive,
+	}
+}
+
+func ToCategoryDTOList(categories []*model.Category) []*CategoryDTO {
+	result := make([]*CategoryDTO, len(categories))
+	for i, category := range categories {
+		result[i] = ToCategoryDTO(category)
+	}
+	return result
+}
