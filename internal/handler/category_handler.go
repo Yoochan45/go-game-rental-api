@@ -23,7 +23,15 @@ func NewCategoryHandler(categoryService service.CategoryService) *CategoryHandle
 	}
 }
 
-// Public endpoints
+// GetAllCategories godoc
+// @Summary Get all categories
+// @Description Get list of all game categories
+// @Tags Categories
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Categories retrieved successfully"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /categories [get]
 func (h *CategoryHandler) GetAllCategories(c echo.Context) error {
 	categories, err := h.categoryService.GetActiveCategories()
 	if err != nil {
@@ -34,6 +42,17 @@ func (h *CategoryHandler) GetAllCategories(c echo.Context) error {
 	return myResponse.Success(c, "Categories retrieved successfully", categoryDTOs)
 }
 
+// GetCategoryDetail godoc
+// @Summary Get category detail
+// @Description Get detailed information about a specific category
+// @Tags Categories
+// @Accept json
+// @Produce json
+// @Param id path int true "Category ID"
+// @Success 200 {object} dto.CategoryDTO "Category retrieved successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid category ID"
+// @Failure 404 {object} map[string]interface{} "Category not found"
+// @Router /categories/{id} [get]
 func (h *CategoryHandler) GetCategoryDetail(c echo.Context) error {
 	categoryID := myRequest.PathParamUint(c, "id")
 	if categoryID == 0 {
@@ -49,7 +68,19 @@ func (h *CategoryHandler) GetCategoryDetail(c echo.Context) error {
 	return myResponse.Success(c, "Category retrieved successfully", response)
 }
 
-// Admin endpoints
+// CreateCategory godoc
+// @Summary Create category
+// @Description Create a new game category (Admin only)
+// @Tags Admin - Categories
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body dto.CreateCategoryRequest true "Category details"
+// @Success 201 {object} map[string]interface{} "Category created successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid input"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /admin/categories [post]
 func (h *CategoryHandler) CreateCategory(c echo.Context) error {
 	var req dto.CreateCategoryRequest
 	if err := c.Bind(&req); err != nil {
@@ -77,6 +108,20 @@ func (h *CategoryHandler) CreateCategory(c echo.Context) error {
 	return myResponse.Created(c, "Category created successfully", response)
 }
 
+// UpdateCategory godoc
+// @Summary Update category
+// @Description Update category information (Admin only)
+// @Tags Admin - Categories
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Category ID"
+// @Param request body dto.UpdateCategoryRequest true "Updated category details"
+// @Success 200 {object} map[string]interface{} "Category updated successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid input"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /admin/categories/{id} [put]
 func (h *CategoryHandler) UpdateCategory(c echo.Context) error {
 	categoryID := myRequest.PathParamUint(c, "id")
 	if categoryID == 0 {
@@ -114,6 +159,19 @@ func (h *CategoryHandler) UpdateCategory(c echo.Context) error {
 	return myResponse.Success(c, "Category updated successfully", response)
 }
 
+// ToggleCategoryStatus godoc
+// @Summary Toggle category status
+// @Description Activate or deactivate a category (Admin only)
+// @Tags Admin - Categories
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Category ID"
+// @Success 200 {object} map[string]interface{} "Category status updated successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid category ID"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /admin/categories/{id}/status [patch]
 func (h *CategoryHandler) ToggleCategoryStatus(c echo.Context) error {
 	categoryID := myRequest.PathParamUint(c, "id")
 	if categoryID == 0 {
@@ -136,6 +194,19 @@ func (h *CategoryHandler) ToggleCategoryStatus(c echo.Context) error {
 	return myResponse.Success(c, "Category status updated successfully", response)
 }
 
+// DeleteCategory godoc
+// @Summary Delete category
+// @Description Delete a category (Admin only)
+// @Tags Admin - Categories
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Category ID"
+// @Success 200 {object} map[string]interface{} "Category deleted successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid category ID"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /admin/categories/{id} [delete]
 func (h *CategoryHandler) DeleteCategory(c echo.Context) error {
 	categoryID := myRequest.PathParamUint(c, "id")
 	if categoryID == 0 {
@@ -151,6 +222,16 @@ func (h *CategoryHandler) DeleteCategory(c echo.Context) error {
 	return myResponse.Success(c, "Category deleted successfully", nil)
 }
 
+// GetAllCategoriesAdmin godoc
+// @Summary Get all categories (Admin)
+// @Description Get list of all game categories, including inactive ones (Admin only)
+// @Tags Admin - Categories
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "Categories retrieved successfully"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /admin/categories [get]
 func (h *CategoryHandler) GetAllCategoriesAdmin(c echo.Context) error {
 	// Remove role parameter since GetAllCategories doesn't need it
 	categories, err := h.categoryService.GetAllCategories()

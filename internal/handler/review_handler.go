@@ -23,6 +23,19 @@ func NewReviewHandler(reviewService service.ReviewService) *ReviewHandler {
 	}
 }
 
+// CreateReview godoc
+// @Summary Create review
+// @Description Create a review for a completed booking
+// @Tags Reviews
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param booking_id path int true "Booking ID"
+// @Param request body dto.CreateReviewRequest true "Review details"
+// @Success 201 {object} map[string]interface{} "Review created successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid input"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /bookings/{booking_id}/reviews [post]
 func (h *ReviewHandler) CreateReview(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	if userID == 0 {
@@ -55,6 +68,19 @@ func (h *ReviewHandler) CreateReview(c echo.Context) error {
 	return myResponse.Created(c, "Review created successfully", nil)
 }
 
+// GetGameReviews godoc
+// @Summary Get game reviews
+// @Description Get list of reviews for a specific game
+// @Tags Reviews
+// @Accept json
+// @Produce json
+// @Param game_id path int true "Game ID"
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} map[string]interface{} "Reviews retrieved successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid game ID"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /games/{game_id}/reviews [get]
 func (h *ReviewHandler) GetGameReviews(c echo.Context) error {
 	gameID := myRequest.PathParamUint(c, "game_id")
 	if gameID == 0 {

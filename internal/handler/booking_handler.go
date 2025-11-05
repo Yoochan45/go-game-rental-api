@@ -23,7 +23,18 @@ func NewBookingHandler(bookingService service.BookingService) *BookingHandler {
 	}
 }
 
-// User endpoints
+// CreateBooking godoc
+// @Summary Create booking
+// @Description Create a new game rental booking
+// @Tags Bookings
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body dto.CreateBookingRequest true "Booking details"
+// @Success 201 {object} map[string]interface{} "Booking created successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid input"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /bookings [post]
 func (h *BookingHandler) CreateBooking(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	if userID == 0 {
@@ -54,6 +65,18 @@ func (h *BookingHandler) CreateBooking(c echo.Context) error {
 	return myResponse.Created(c, "Booking created successfully", nil)
 }
 
+// GetMyBookings godoc
+// @Summary Get my bookings
+// @Description Get list of current user's bookings
+// @Tags Bookings
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} map[string]interface{} "Bookings retrieved successfully"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /bookings/my [get]
 func (h *BookingHandler) GetMyBookings(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	if userID == 0 {
@@ -88,6 +111,19 @@ func (h *BookingHandler) GetMyBookings(c echo.Context) error {
 	return myResponse.Paginated(c, "Bookings retrieved successfully", bookingDTOs, meta)
 }
 
+// GetBookingDetail godoc
+// @Summary Get booking detail
+// @Description Get detailed information about a specific booking
+// @Tags Bookings
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Booking ID"
+// @Success 200 {object} dto.BookingDTO "Booking retrieved successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid booking ID"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Booking not found"
+// @Router /bookings/{id} [get]
 func (h *BookingHandler) GetBookingDetail(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	if userID == 0 {
@@ -108,6 +144,18 @@ func (h *BookingHandler) GetBookingDetail(c echo.Context) error {
 	return myResponse.Success(c, "Booking retrieved successfully", response)
 }
 
+// CancelBooking godoc
+// @Summary Cancel booking
+// @Description Cancel a pending booking
+// @Tags Bookings
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Booking ID"
+// @Success 200 {object} map[string]interface{} "Booking cancelled successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid booking ID or booking cannot be cancelled"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /bookings/{id}/cancel [patch]
 func (h *BookingHandler) CancelBooking(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	if userID == 0 {
@@ -128,6 +176,19 @@ func (h *BookingHandler) CancelBooking(c echo.Context) error {
 }
 
 // Admin endpoints
+// GetAllBookings godoc
+// @Summary Get all bookings
+// @Description Get list of all bookings (Admin only)
+// @Tags Admin - Bookings
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} map[string]interface{} "Bookings retrieved successfully"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /admin/bookings [get]
 func (h *BookingHandler) GetAllBookings(c echo.Context) error {
 	page := myRequest.QueryInt(c, "page", 1)
 	limit := myRequest.QueryInt(c, "limit", 10)
@@ -159,6 +220,19 @@ func (h *BookingHandler) GetAllBookings(c echo.Context) error {
 	return myResponse.Paginated(c, "Bookings retrieved successfully", bookingDTOs, meta)
 }
 
+// GetBookingDetailAdmin godoc
+// @Summary Get booking detail (Admin)
+// @Description Get detailed information about a specific booking (Admin only)
+// @Tags Admin - Bookings
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Booking ID"
+// @Success 200 {object} dto.BookingDTO "Booking retrieved successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid booking ID"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Booking not found"
+// @Router /admin/bookings/{id} [get]
 func (h *BookingHandler) GetBookingDetailAdmin(c echo.Context) error {
 	bookingID := myRequest.PathParamUint(c, "id")
 	if bookingID == 0 {

@@ -13,6 +13,7 @@ import (
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
 func main() {
@@ -81,6 +82,8 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
+
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	// Register routes
 	router.RegisterRoutes(

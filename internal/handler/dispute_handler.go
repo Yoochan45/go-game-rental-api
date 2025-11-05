@@ -23,6 +23,19 @@ func NewDisputeHandler(disputeService service.DisputeService) *DisputeHandler {
 	}
 }
 
+// CreateDispute godoc
+// @Summary Create dispute
+// @Description Create a dispute for a booking
+// @Tags Disputes
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param booking_id path int true "Booking ID"
+// @Param request body dto.CreateDisputeRequest true "Dispute details"
+// @Success 201 {object} map[string]interface{} "Dispute created successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid input"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /bookings/{booking_id}/disputes [post]
 func (h *DisputeHandler) CreateDispute(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	if userID == 0 {
@@ -53,6 +66,18 @@ func (h *DisputeHandler) CreateDispute(c echo.Context) error {
 	return myResponse.Created(c, "Dispute created successfully", nil)
 }
 
+// GetMyDisputes godoc
+// @Summary Get my disputes
+// @Description Get list of current user's disputes
+// @Tags Disputes
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} map[string]interface{} "Disputes retrieved successfully"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /disputes/my [get]
 func (h *DisputeHandler) GetMyDisputes(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	if userID == 0 {
@@ -97,6 +122,19 @@ func (h *DisputeHandler) GetMyDisputes(c echo.Context) error {
 	return myResponse.Paginated(c, "Disputes retrieved successfully", disputeDTOs, meta)
 }
 
+// GetAllDisputes godoc
+// @Summary Get all disputes
+// @Description Get list of all disputes (Admin only)
+// @Tags Admin - Disputes
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} map[string]interface{} "Disputes retrieved successfully"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /admin/disputes [get]
 func (h *DisputeHandler) GetAllDisputes(c echo.Context) error {
 	page := myRequest.QueryInt(c, "page", 1)
 	limit := myRequest.QueryInt(c, "limit", 10)

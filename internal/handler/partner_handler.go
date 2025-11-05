@@ -25,6 +25,18 @@ func NewPartnerHandler(partnerService service.PartnerApplicationService, booking
 	}
 }
 
+// ApplyPartner godoc
+// @Summary Apply for partner
+// @Description Submit application to become a game rental partner
+// @Tags Partner
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body dto.CreatePartnerApplicationRequest true "Partner application details"
+// @Success 201 {object} map[string]interface{} "Partner application submitted successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid input"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /partner/apply [post]
 func (h *PartnerHandler) ApplyPartner(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	if userID == 0 {
@@ -54,6 +66,19 @@ func (h *PartnerHandler) ApplyPartner(c echo.Context) error {
 	return myResponse.Created(c, "Partner application submitted successfully", nil)
 }
 
+// GetPartnerBookings godoc
+// @Summary Get partner bookings
+// @Description Get list of bookings for partner's games
+// @Tags Partner
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} map[string]interface{} "Partner bookings retrieved successfully"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden - Partner role required"
+// @Router /partner/bookings [get]
 func (h *PartnerHandler) GetPartnerBookings(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	if userID == 0 {
@@ -88,6 +113,19 @@ func (h *PartnerHandler) GetPartnerBookings(c echo.Context) error {
 	return myResponse.Paginated(c, "Partner bookings retrieved successfully", bookingDTOs, meta)
 }
 
+// ConfirmHandover godoc
+// @Summary Confirm game handover
+// @Description Confirm that game has been handed over to customer
+// @Tags Partner
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Booking ID"
+// @Success 200 {object} map[string]interface{} "Handover confirmed successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid booking ID"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden - Partner role required"
+// @Router /partner/bookings/{id}/confirm-handover [patch]
 func (h *PartnerHandler) ConfirmHandover(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	if userID == 0 {
@@ -107,6 +145,19 @@ func (h *PartnerHandler) ConfirmHandover(c echo.Context) error {
 	return myResponse.Success(c, "Handover confirmed successfully", nil)
 }
 
+// ConfirmReturn godoc
+// @Summary Confirm game return
+// @Description Confirm that game has been returned by customer
+// @Tags Partner
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Booking ID"
+// @Success 200 {object} map[string]interface{} "Return confirmed successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid booking ID"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden - Partner role required"
+// @Router /partner/bookings/{id}/confirm-return [patch]
 func (h *PartnerHandler) ConfirmReturn(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	if userID == 0 {

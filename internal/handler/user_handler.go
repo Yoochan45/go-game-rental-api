@@ -23,6 +23,19 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 	}
 }
 
+// GetAllUsers godoc
+// @Summary Get all users
+// @Description Get list of all users (Admin only)
+// @Tags Admin - Users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} map[string]interface{} "Users retrieved successfully"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /admin/users [get]
 func (h *UserHandler) GetAllUsers(c echo.Context) error {
 	page := myRequest.QueryInt(c, "page", 1)
 	limit := myRequest.QueryInt(c, "limit", 10)
@@ -58,6 +71,20 @@ func (h *UserHandler) GetAllUsers(c echo.Context) error {
 	return myResponse.Paginated(c, "Users retrieved successfully", userDTOs, meta)
 }
 
+// GetUserDetail godoc
+// @Summary Get user detail
+// @Description Get detailed information about a specific user (Admin only)
+// @Tags Admin - Users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "User ID"
+// @Success 200 {object} dto.UserDTO "User retrieved successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid user ID"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Failure 404 {object} map[string]interface{} "User not found"
+// @Router /admin/users/{id} [get]
 func (h *UserHandler) GetUserDetail(c echo.Context) error {
 	userID := myRequest.PathParamUint(c, "id")
 	if userID == 0 {
@@ -74,6 +101,20 @@ func (h *UserHandler) GetUserDetail(c echo.Context) error {
 	return myResponse.Success(c, "User retrieved successfully", response)
 }
 
+// UpdateUserRole godoc
+// @Summary Update user role
+// @Description Update user role (Admin only)
+// @Tags Admin - Users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "User ID"
+// @Param request body dto.UpdateUserRoleRequest true "Role update details"
+// @Success 200 {object} map[string]interface{} "User role updated successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid input"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /admin/users/{id}/role [patch]
 func (h *UserHandler) UpdateUserRole(c echo.Context) error {
 	userID := myRequest.PathParamUint(c, "id")
 	if userID == 0 {
@@ -106,6 +147,19 @@ func (h *UserHandler) UpdateUserRole(c echo.Context) error {
 	return myResponse.Success(c, "User role updated successfully", response)
 }
 
+// ToggleUserStatus godoc
+// @Summary Toggle user status
+// @Description Ban or unban a user (Admin only)
+// @Tags Admin - Users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "User ID"
+// @Success 200 {object} map[string]interface{} "User status updated successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid user ID"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /admin/users/{id}/status [patch]
 func (h *UserHandler) ToggleUserStatus(c echo.Context) error {
 	userID := myRequest.PathParamUint(c, "id")
 	if userID == 0 {
@@ -130,6 +184,19 @@ func (h *UserHandler) ToggleUserStatus(c echo.Context) error {
 	return myResponse.Success(c, "User status updated successfully", response)
 }
 
+// DeleteUser godoc
+// @Summary Delete user
+// @Description Soft delete a user (Admin only)
+// @Tags Admin - Users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "User ID"
+// @Success 200 {object} map[string]interface{} "User deleted successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid user ID"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /admin/users/{id} [delete]
 func (h *UserHandler) DeleteUser(c echo.Context) error {
 	userID := myRequest.PathParamUint(c, "id")
 	if userID == 0 {

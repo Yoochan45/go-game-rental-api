@@ -1,3 +1,22 @@
+// @title Video Game Rental API
+// @version 1.0
+// @description API untuk platform penyewaan video game fisik
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.email support@gamerental.com
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
 package handler
 
 import (
@@ -28,6 +47,16 @@ func NewAuthHandler(userService service.UserService, jwtSecret string) *AuthHand
 	}
 }
 
+// Register godoc
+// @Summary Register new user
+// @Description Register a new customer account
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body dto.RegisterRequest true "Registration details"
+// @Success 201 {object} map[string]interface{} "User registered successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid input"
+// @Router /auth/register [post]
 func (h *AuthHandler) Register(c echo.Context) error {
 	var req dto.RegisterRequest
 
@@ -75,6 +104,17 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	return myResponse.Created(c, "User registered successfully", response)
 }
 
+// Login godoc
+// @Summary User login
+// @Description Authenticate user and get JWT tokens
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body dto.LoginRequest true "Login credentials"
+// @Success 200 {object} dto.LoginResponse "Login successful"
+// @Failure 400 {object} map[string]interface{} "Invalid input"
+// @Failure 401 {object} map[string]interface{} "Invalid credentials"
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(c echo.Context) error {
 	var req dto.LoginRequest
 
@@ -122,6 +162,17 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	return myResponse.Success(c, "Login successful", response)
 }
 
+// RefreshToken godoc
+// @Summary Refresh access token
+// @Description Get new access token using refresh token
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body dto.RefreshTokenRequest true "Refresh token"
+// @Success 200 {object} map[string]interface{} "Token refreshed successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid input"
+// @Failure 401 {object} map[string]interface{} "Invalid refresh token"
+// @Router /auth/refresh [post]
 func (h *AuthHandler) RefreshToken(c echo.Context) error {
 	var req dto.RefreshTokenRequest
 
@@ -169,6 +220,17 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 	return myResponse.Success(c, "Token refreshed successfully", response)
 }
 
+// GetProfile godoc
+// @Summary Get user profile
+// @Description Get current user profile information
+// @Tags User
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} dto.UserDTO "Profile retrieved successfully"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "User not found"
+// @Router /users/me [get]
 func (h *AuthHandler) GetProfile(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	if userID == 0 {
@@ -184,6 +246,18 @@ func (h *AuthHandler) GetProfile(c echo.Context) error {
 	return myResponse.Success(c, "Profile retrieved successfully", response)
 }
 
+// UpdateProfile godoc
+// @Summary Update user profile
+// @Description Update current user profile information
+// @Tags User
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body dto.UpdateProfileRequest true "Profile update details"
+// @Success 200 {object} dto.UserDTO "Profile updated successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid input"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /users/me [put]
 func (h *AuthHandler) UpdateProfile(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	if userID == 0 {
@@ -221,6 +295,18 @@ func (h *AuthHandler) UpdateProfile(c echo.Context) error {
 	return myResponse.Success(c, "Profile updated successfully", response)
 }
 
+// ChangePassword godoc
+// @Summary Change password
+// @Description Change current user password
+// @Tags User
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body dto.ChangePasswordRequest true "Password change details"
+// @Success 200 {object} map[string]interface{} "Password changed successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid input"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /users/me/password [patch]
 func (h *AuthHandler) ChangePassword(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	if userID == 0 {
