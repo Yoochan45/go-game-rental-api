@@ -38,12 +38,6 @@ type CreateBookingRequest struct {
 	Notes     string    `json:"notes,omitempty"`
 }
 
-type BookingListResponse struct {
-	Bookings   []*BookingDTO `json:"bookings"`
-	TotalCount int64         `json:"total_count"`
-	Page       int           `json:"page"`
-	Limit      int           `json:"limit"`
-}
 
 func ToBookingDTO(booking *model.Booking) *BookingDTO {
 	if booking == nil {

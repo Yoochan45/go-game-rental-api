@@ -29,13 +29,6 @@ type UpdateReviewRequest struct {
 	Comment string `json:"comment,omitempty"`
 }
 
-type ReviewListResponse struct {
-	Reviews       []*ReviewDTO `json:"reviews"`
-	TotalCount    int64        `json:"total_count"`
-	AverageRating float64      `json:"average_rating,omitempty"`
-	Page          int          `json:"page"`
-	Limit         int          `json:"limit"`
-}
 
 func ToReviewDTO(review *model.Review) *ReviewDTO {
 	if review == nil {

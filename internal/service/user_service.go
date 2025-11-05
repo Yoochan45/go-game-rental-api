@@ -2,9 +2,13 @@ package service
 
 import (
 	"errors"
+	"time"
 
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
+	"github.com/Yoochan45/go-game-rental-api/internal/model/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/repository"
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -23,10 +27,9 @@ type UserService interface {
 	Register(registerData interface{}) (*model.User, error)
 	Login(loginData interface{}, jwtSecret string) (interface{}, error)
 	RefreshToken(refreshData interface{}, jwtSecret string) (interface{}, error)
-	ChangePassword(userID uint, currentPassword, newPassword string) error
 
 	// Admin methods
-	GetAllUsers(requestorRole model.UserRole, limit, offset int) ([]*model.User, error)
+	GetAllUsers(requestorRole model.UserRole, limit, offset int) ([]*model.User, int64, error)
 	GetUserDetail(requestorRole model.UserRole, userID uint) (*model.User, error)
 	UpdateUserRole(requestorRole model.UserRole, userID uint, newRole model.UserRole) error
 	ToggleUserStatus(requestorRole model.UserRole, userID uint) error
@@ -48,37 +51,95 @@ func (s *userService) GetProfile(userID uint) (*model.User, error) {
 }
 
 func (s *userService) UpdateProfile(userID uint, updateData interface{}) error {
-	// TODO: Implement proper DTO to model conversion
-	return errors.New("not implemented yet")
+	req := updateData.(*dto.UpdateProfileRequest)
+	
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+	
+	user.FullName = req.FullName
+	user.Phone = &req.Phone
+	user.Address = &req.Address
+	
+	return s.userRepo.Update(user)
 }
 
 func (s *userService) Register(registerData interface{}) (*model.User, error) {
-	// TODO: Implement proper registration logic with password hashing
-	return nil, errors.New("not implemented yet")
+	req := registerData.(*dto.RegisterRequest)
+	
+	// Check if user exists
+	if _, err := s.userRepo.GetByEmail(req.Email); err == nil {
+		return nil, errors.New("email already exists")
+	}
+	
+	// Hash password
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	
+	user := &model.User{
+		Email:    req.Email,
+		Password: string(hashed),
+		FullName: req.FullName,
+		Phone:    &req.Phone,
+		Address:  &req.Address,
+		Role:     model.RoleCustomer,
+	}
+	
+	err = s.userRepo.Create(user)
+	return user, err
 }
 
 func (s *userService) Login(loginData interface{}, jwtSecret string) (interface{}, error) {
-	// TODO: Implement proper login logic with JWT generation
-	return nil, errors.New("not implemented yet")
+	req := loginData.(*dto.LoginRequest)
+	
+	user, err := s.userRepo.GetByEmail(req.Email)
+	if err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+	
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+	
+	// Generate JWT
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": user.ID,
+		"role":    user.Role,
+		"exp":     time.Now().Add(24 * time.Hour).Unix(),
+	})
+	
+	accessToken, err := token.SignedString([]byte(jwtSecret))
+	if err != nil {
+		return nil, err
+	}
+	
+	return &dto.LoginResponse{
+		AccessToken: accessToken,
+		User:        dto.ToUserDTO(user),
+		ExpiresAt:   time.Now().Add(24 * time.Hour),
+	}, nil
 }
 
 func (s *userService) RefreshToken(refreshData interface{}, jwtSecret string) (interface{}, error) {
-	// TODO: Implement proper refresh token logic
-	return nil, errors.New("not implemented yet")
+	// For now, just return error - implement later if needed
+	return nil, errors.New("refresh token not implemented")
 }
 
-func (s *userService) ChangePassword(userID uint, currentPassword, newPassword string) error {
-	// Add password change logic here
-	// Should verify current password and hash new password
-	return nil
-}
-
-func (s *userService) GetAllUsers(requestorRole model.UserRole, limit, offset int) ([]*model.User, error) {
+func (s *userService) GetAllUsers(requestorRole model.UserRole, limit, offset int) ([]*model.User, int64, error) {
 	if !s.canManageUsers(requestorRole) {
-		return nil, ErrInsufficientPermission
+		return nil, 0, ErrInsufficientPermission
 	}
 
-	return s.userRepo.GetAll(limit, offset)
+	users, err := s.userRepo.GetAll(limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	count, err := s.userRepo.Count()
+	return users, count, err
 }
 
 func (s *userService) GetUserDetail(requestorRole model.UserRole, userID uint) (*model.User, error) {

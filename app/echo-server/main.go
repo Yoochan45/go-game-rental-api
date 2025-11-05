@@ -1,11 +1,11 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	myOrm "github.com/Yoochan45/go-api-utils/pkg-echo/orm"
 	myConfig "github.com/Yoochan45/go-api-utils/pkg/config"
+	"github.com/sirupsen/logrus"
 	"github.com/Yoochan45/go-game-rental-api/app/echo-server/router"
 	"github.com/Yoochan45/go-game-rental-api/internal/handler"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
@@ -17,15 +17,20 @@ import (
 )
 
 func main() {
+	// Setup logrus
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logrus.SetLevel(logrus.InfoLevel)
+	
 	cfg := myConfig.LoadEnv()
 	JwtSecret := os.Getenv("JWT_SECRET")
 	if JwtSecret == "" {
 		JwtSecret = "dev-secret"
+		logrus.Warn("Using default JWT secret for development")
 	}
 
 	db, err := myOrm.Init(cfg.DatabaseURL)
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		logrus.Fatal("Failed to connect to database:", err)
 	}
 
 	// Auto migrate all models
@@ -41,7 +46,7 @@ func main() {
 		&model.Dispute{},
 	)
 	if err != nil {
-		log.Println("Migration warning:", err)
+		logrus.Warn("Migration warning:", err)
 		// Continue even if tables already exist
 	}
 
@@ -106,6 +111,6 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Server starting on :%s", port)
-	log.Fatal(e.Start(":" + port))
+	logrus.Infof("Server starting on :%s", port)
+	logrus.Fatal(e.Start(":" + port))
 }

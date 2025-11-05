@@ -20,20 +20,8 @@ type UpdateProfileRequest struct {
 	Address  string `json:"address,omitempty"`
 }
 
-type ChangePasswordRequest struct {
-	CurrentPassword string `json:"current_password" validate:"required"`
-	NewPassword     string `json:"new_password" validate:"required,min=8"`
-}
-
 type UpdateUserRoleRequest struct {
 	Role model.UserRole `json:"role" validate:"required,oneof=customer partner admin"`
-}
-
-type UserListResponse struct {
-	Users      []*UserDTO `json:"users"`
-	TotalCount int64      `json:"total_count"`
-	Page       int        `json:"page"`
-	Limit      int        `json:"limit"`
 }
 
 func ToUserDTO(user *model.User) *UserDTO {

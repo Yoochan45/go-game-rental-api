@@ -16,6 +16,7 @@ var (
 	ErrBookingCannotCancel  = errors.New("cannot cancel booking in current status")
 	ErrBookingCannotConfirm = errors.New("cannot confirm booking in current status")
 	ErrBookingGameNotActive = errors.New("game is not active for booking")
+	ErrGameStockInsufficient = errors.New("insufficient stock")
 )
 
 type BookingService interface {

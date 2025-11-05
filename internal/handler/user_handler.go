@@ -116,16 +116,12 @@ func (h *UserHandler) GetAllUsers(c echo.Context) error {
 
 	role := echomw.CurrentRole(c)
 
-	// GetAllUsers returns 2 values: ([]*model.User, error), not 3
-	users, err := h.userService.GetAllUsers(model.UserRole(role), limit, (page-1)*limit)
+	users, totalCount, err := h.userService.GetAllUsers(model.UserRole(role), limit, (page-1)*limit)
 	if err != nil {
 		return myResponse.Forbidden(c, err.Error())
 	}
 
 	userDTOs := dto.ToUserDTOList(users)
-
-	// Calculate total count manually if needed
-	totalCount := int64(len(users))
 
 	meta := map[string]any{
 		"page":        page,

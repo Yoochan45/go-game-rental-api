@@ -17,6 +17,7 @@ type UserRepository interface {
 	UpdateRole(userID uint, newRole model.UserRole) error
 	UpdateActiveStatus(userID uint, isActive bool) error
 	GetActiveUsers(limit, offset int) ([]*model.User, error)
+	Count() (int64, error)
 	CountByRole(role model.UserRole) (int64, error)
 }
 
@@ -83,6 +84,12 @@ func (r *userRepository) GetActiveUsers(limit, offset int) ([]*model.User, error
 	var users []*model.User
 	err := r.db.Where("is_active = ?", true).Limit(limit).Offset(offset).Find(&users).Error
 	return users, err
+}
+
+func (r *userRepository) Count() (int64, error) {
+	var count int64
+	err := r.db.Model(&model.User{}).Count(&count).Error
+	return count, err
 }
 
 func (r *userRepository) CountByRole(role model.UserRole) (int64, error) {

@@ -3,8 +3,6 @@ package dto
 import (
 	"time"
 
-	"github.com/lib/pq"
-
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
 )
 
@@ -29,8 +27,6 @@ type GameDTO struct {
 	Approver          *UserDTO             `json:"approver,omitempty"`
 	ApprovedAt        *time.Time           `json:"approved_at,omitempty"`
 	RejectionReason   *string              `json:"rejection_reason,omitempty"`
-	AverageRating     float64              `json:"average_rating,omitempty"`
-	ReviewCount       int64                `json:"review_count,omitempty"`
 	CreatedAt         time.Time            `json:"created_at"`
 	UpdatedAt         time.Time            `json:"updated_at"`
 }
@@ -58,33 +54,7 @@ type UpdateGameRequest struct {
 	Images            []string `json:"images,omitempty"`
 }
 
-type UpdateStockRequest struct {
-	Stock int `json:"stock" validate:"required,min=0"`
-}
 
-type ApproveGameRequest struct {
-	Action string `json:"action" validate:"required,oneof=approve reject"`
-	Reason string `json:"reason,omitempty" validate:"required_if=Action reject"`
-}
-
-type GameListResponse struct {
-	Games      []*GameDTO `json:"games"`
-	TotalCount int64      `json:"total_count"`
-	Page       int        `json:"page"`
-	Limit      int        `json:"limit"`
-}
-
-type GameSearchRequest struct {
-	Query      string  `form:"q"`
-	CategoryID uint    `form:"category_id"`
-	MinPrice   float64 `form:"min_price"`
-	MaxPrice   float64 `form:"max_price"`
-	Platform   string  `form:"platform"`
-	Condition  string  `form:"condition"`
-	Available  bool    `form:"available"`
-	Page       int     `form:"page" validate:"min=1"`
-	Limit      int     `form:"limit" validate:"min=1,max=100"`
-}
 
 func ToGameDTO(game *model.Game) *GameDTO {
 	if game == nil {
@@ -125,17 +95,4 @@ func ToGameDTOList(games []*model.Game) []*GameDTO {
 	return result
 }
 
-func FromCreateGameRequest(req *CreateGameRequest) *model.Game {
-	return &model.Game{
-		CategoryID:        req.CategoryID,
-		Name:              req.Name,
-		Description:       &req.Description,
-		Platform:          &req.Platform,
-		Stock:             req.Stock,
-		AvailableStock:    req.Stock,
-		RentalPricePerDay: req.RentalPricePerDay,
-		SecurityDeposit:   req.SecurityDeposit,
-		Condition:         req.Condition,
-		Images:            pq.StringArray(req.Images),
-	}
-}
+

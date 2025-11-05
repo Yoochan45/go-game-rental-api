@@ -9,7 +9,6 @@ type CategoryDTO struct {
 	Name        string  `json:"name"`
 	Description *string `json:"description,omitempty"`
 	IsActive    bool    `json:"is_active"`
-	GameCount   int64   `json:"game_count,omitempty"`
 }
 
 type CreateCategoryRequest struct {
@@ -20,11 +19,6 @@ type CreateCategoryRequest struct {
 type UpdateCategoryRequest struct {
 	Name        string `json:"name" validate:"required,min=2,max=100"`
 	Description string `json:"description,omitempty"`
-}
-
-type CategoryListResponse struct {
-	Categories []*CategoryDTO `json:"categories"`
-	TotalCount int64          `json:"total_count"`
 }
 
 func ToCategoryDTO(category *model.Category) *CategoryDTO {

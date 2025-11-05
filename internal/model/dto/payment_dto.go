@@ -31,13 +31,6 @@ type PaymentWebhookRequest struct {
 	FailureReason     *string `json:"failure_reason,omitempty"`
 }
 
-type PaymentListResponse struct {
-	Payments   []*PaymentDTO `json:"payments"`
-	TotalCount int64         `json:"total_count"`
-	Page       int           `json:"page"`
-	Limit      int           `json:"limit"`
-}
-
 func ToPaymentDTO(payment *model.Payment) *PaymentDTO {
 	if payment == nil {
 		return nil
@@ -66,46 +59,4 @@ func ToPaymentDTOList(payments []*model.Payment) []*PaymentDTO {
 	return result
 }
 
-func (d *PaymentDTO) GetProvider() model.PaymentProvider {
-	return d.Provider
-}
 
-func (d *PaymentDTO) GetProviderPaymentID() *string {
-	return d.ProviderPaymentID
-}
-
-func (d *PaymentDTO) GetAmount() float64 {
-	return d.Amount
-}
-
-func (d *PaymentDTO) GetStatus() model.PaymentStatus {
-	return d.Status
-}
-
-func (d *PaymentDTO) GetPaymentMethod() *string {
-	return d.PaymentMethod
-}
-
-func (d *PaymentDTO) GetPaidAt() *time.Time {
-	return d.PaidAt
-}
-
-func (d *PaymentDTO) GetFailedAt() *time.Time {
-	return d.FailedAt
-}
-
-func (d *PaymentDTO) GetFailureReason() *string {
-	return d.FailureReason
-}
-
-func (d *PaymentDTO) GetCreatedAt() time.Time {
-	return d.CreatedAt
-}
-
-func (d *PaymentDTO) GetBookingID() uint {
-	return d.BookingID
-}
-
-func (d *PaymentDTO) GetID() uint {
-	return d.ID
-}

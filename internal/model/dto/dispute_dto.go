@@ -34,12 +34,6 @@ type ResolveDisputeRequest struct {
 	Resolution string `json:"resolution,omitempty" validate:"required_if=Action resolve,required_if=Action close"`
 }
 
-type DisputeListResponse struct {
-	Disputes   []*DisputeDTO `json:"disputes"`
-	TotalCount int64         `json:"total_count"`
-	Page       int           `json:"page"`
-	Limit      int           `json:"limit"`
-}
 
 func ToDisputeDTO(dispute *model.Dispute) *DisputeDTO {
 	if dispute == nil {

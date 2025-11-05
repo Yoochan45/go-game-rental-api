@@ -159,41 +159,6 @@ func (h *CategoryHandler) UpdateCategory(c echo.Context) error {
 	return myResponse.Success(c, "Category updated successfully", response)
 }
 
-// ToggleCategoryStatus godoc
-// @Summary Toggle category status
-// @Description Activate or deactivate a category (Admin only)
-// @Tags Admin - Categories
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path int true "Category ID"
-// @Success 200 {object} map[string]interface{} "Category status updated successfully"
-// @Failure 400 {object} map[string]interface{} "Invalid category ID"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Failure 403 {object} map[string]interface{} "Forbidden"
-// @Router /admin/categories/{id}/status [patch]
-func (h *CategoryHandler) ToggleCategoryStatus(c echo.Context) error {
-	categoryID := myRequest.PathParamUint(c, "id")
-	if categoryID == 0 {
-		return myResponse.BadRequest(c, "Invalid category ID")
-	}
-
-	role := echomw.CurrentRole(c)
-	err := h.categoryService.ToggleCategoryStatus(model.UserRole(role), categoryID)
-	if err != nil {
-		return myResponse.BadRequest(c, err.Error())
-	}
-
-	// Get updated category for response
-	category, err := h.categoryService.GetCategoryByID(categoryID)
-	if err != nil {
-		return myResponse.InternalServerError(c, "Failed to retrieve updated category")
-	}
-
-	response := dto.ToCategoryDTO(category)
-	return myResponse.Success(c, "Category status updated successfully", response)
-}
-
 // DeleteCategory godoc
 // @Summary Delete category
 // @Description Delete a category (Admin only)
@@ -222,23 +187,4 @@ func (h *CategoryHandler) DeleteCategory(c echo.Context) error {
 	return myResponse.Success(c, "Category deleted successfully", nil)
 }
 
-// GetAllCategoriesAdmin godoc
-// @Summary Get all categories (Admin)
-// @Description Get list of all game categories, including inactive ones (Admin only)
-// @Tags Admin - Categories
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} map[string]interface{} "Categories retrieved successfully"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
-// @Router /admin/categories [get]
-func (h *CategoryHandler) GetAllCategoriesAdmin(c echo.Context) error {
-	// Remove role parameter since GetAllCategories doesn't need it
-	categories, err := h.categoryService.GetAllCategories()
-	if err != nil {
-		return myResponse.InternalServerError(c, "Failed to retrieve categories")
-	}
 
-	categoryDTOs := dto.ToCategoryDTOList(categories)
-	return myResponse.Success(c, "Categories retrieved successfully", categoryDTOs)
-}

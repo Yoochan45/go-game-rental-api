@@ -29,17 +29,7 @@ type CreatePartnerApplicationRequest struct {
 	BusinessDescription string `json:"business_description,omitempty"`
 }
 
-type DecideApplicationRequest struct {
-	Action string `json:"action" validate:"required,oneof=approve reject"`
-	Reason string `json:"reason,omitempty" validate:"required_if=Action reject"`
-}
 
-type PartnerApplicationListResponse struct {
-	Applications []*PartnerApplicationDTO `json:"applications"`
-	TotalCount   int64                    `json:"total_count"`
-	Page         int                      `json:"page"`
-	Limit        int                      `json:"limit"`
-}
 
 func ToPartnerApplicationDTO(app *model.PartnerApplication) *PartnerApplicationDTO {
 	if app == nil {
@@ -71,11 +61,4 @@ func ToPartnerApplicationDTOList(apps []*model.PartnerApplication) []*PartnerApp
 	return result
 }
 
-func FromCreatePartnerApplicationRequest(req *CreatePartnerApplicationRequest) *model.PartnerApplication {
-	return &model.PartnerApplication{
-		BusinessName:        req.BusinessName,
-		BusinessAddress:     req.BusinessAddress,
-		BusinessPhone:       &req.BusinessPhone,
-		BusinessDescription: &req.BusinessDescription,
-	}
-}
+

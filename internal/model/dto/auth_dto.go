@@ -18,10 +18,9 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token"`
-	User         *UserDTO  `json:"user"`
-	ExpiresAt    time.Time `json:"expires_at"`
+	AccessToken string    `json:"access_token"`
+	User        *UserDTO  `json:"user"`
+	ExpiresAt   time.Time `json:"expires_at"`
 }
 
 type RefreshTokenRequest struct {

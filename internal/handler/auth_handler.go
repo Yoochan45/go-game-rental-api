@@ -6,6 +6,7 @@ import (
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
+	"github.com/sirupsen/logrus"
 )
 
 type AuthHandler struct {
@@ -33,6 +34,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 
 	user, err := h.userService.Register(&req)
 	if err != nil {
+		logrus.WithError(err).Error("Registration failed")
 		return myResponse.BadRequest(c, err.Error())
 	}
 
@@ -50,6 +52,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 	response, err := h.userService.Login(&req, h.jwtSecret)
 	if err != nil {
+		logrus.WithError(err).WithField("email", req.Email).Error("Login failed")
 		return myResponse.Unauthorized(c, err.Error())
 	}
 
