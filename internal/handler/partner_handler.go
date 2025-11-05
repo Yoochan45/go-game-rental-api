@@ -7,6 +7,7 @@ import (
 	"github.com/Yoochan45/go-game-rental-api/internal/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
+	"github.com/Yoochan45/go-game-rental-api/internal/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 )
@@ -54,8 +55,8 @@ func (h *PartnerHandler) ApplyPartner(c echo.Context) error {
 	applicationData := &model.PartnerApplication{
 		BusinessName:        req.BusinessName,
 		BusinessAddress:     req.BusinessAddress,
-		BusinessPhone:       &req.BusinessPhone,
-		BusinessDescription: &req.BusinessDescription,
+		BusinessPhone:       utils.PtrOrNil(req.BusinessPhone),
+		BusinessDescription: utils.PtrOrNil(req.BusinessDescription),
 	}
 
 	err := h.partnerService.SubmitApplication(userID, applicationData)
@@ -85,29 +86,14 @@ func (h *PartnerHandler) GetPartnerBookings(c echo.Context) error {
 		return myResponse.Unauthorized(c, "Unauthorized")
 	}
 
-	page := myRequest.QueryInt(c, "page", 1)
-	limit := myRequest.QueryInt(c, "limit", 10)
+	params := utils.ParsePagination(c)
 
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 100 {
-		limit = 10
-	}
-
-	bookings, err := h.bookingService.GetPartnerBookings(userID, limit, (page-1)*limit)
+	bookings, err := h.bookingService.GetPartnerBookings(userID, params.Limit, params.Offset)
 	if err != nil {
 		return myResponse.InternalServerError(c, "Failed to retrieve bookings")
 	}
 
-	totalCount := int64(len(bookings))
-	meta := map[string]any{
-		"page":        page,
-		"limit":       limit,
-		"total":       totalCount,
-		"total_pages": (totalCount + int64(limit) - 1) / int64(limit),
-	}
-
+	meta := utils.CreateMeta(params, int64(len(bookings)))
 	return myResponse.Paginated(c, "Partner bookings retrieved successfully", bookings, meta)
 }
 

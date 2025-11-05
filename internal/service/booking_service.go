@@ -222,7 +222,7 @@ func (s *bookingService) GetAllBookings(requestorRole model.UserRole, limit, off
 		return nil, ErrInsufficientPermission
 	}
 
-	return s.bookingRepo.GetBookingsByStatus(model.BookingStatus(""), limit, offset) // Get all
+	return s.bookingRepo.GetUserBookings(0, limit, offset) // 0 means all users
 }
 
 func (s *bookingService) GetBookingsByStatus(requestorRole model.UserRole, status model.BookingStatus, limit, offset int) ([]*model.Booking, error) {

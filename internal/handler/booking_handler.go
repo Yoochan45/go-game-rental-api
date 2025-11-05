@@ -7,6 +7,7 @@ import (
 	"github.com/Yoochan45/go-game-rental-api/internal/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
+	"github.com/Yoochan45/go-game-rental-api/internal/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 )
@@ -54,7 +55,7 @@ func (h *BookingHandler) CreateBooking(c echo.Context) error {
 		GameID:    req.GameID,
 		StartDate: req.StartDate,
 		EndDate:   req.EndDate,
-		Notes:     &req.Notes,
+		Notes:     utils.PtrOrNil(req.Notes),
 	}
 
 	err := h.bookingService.CreateBooking(userID, bookingData)
@@ -83,29 +84,14 @@ func (h *BookingHandler) GetMyBookings(c echo.Context) error {
 		return myResponse.Unauthorized(c, "Unauthorized")
 	}
 
-	page := myRequest.QueryInt(c, "page", 1)
-	limit := myRequest.QueryInt(c, "limit", 10)
+	params := utils.ParsePagination(c)
 
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 100 {
-		limit = 10
-	}
-
-	bookings, err := h.bookingService.GetUserBookings(userID, limit, (page-1)*limit)
+	bookings, err := h.bookingService.GetUserBookings(userID, params.Limit, params.Offset)
 	if err != nil {
 		return myResponse.InternalServerError(c, "Failed to retrieve bookings")
 	}
 
-	totalCount := int64(len(bookings))
-	meta := map[string]any{
-		"page":        page,
-		"limit":       limit,
-		"total":       totalCount,
-		"total_pages": (totalCount + int64(limit) - 1) / int64(limit),
-	}
-
+	meta := utils.CreateMeta(params, int64(len(bookings)))
 	return myResponse.Paginated(c, "Bookings retrieved successfully", bookings, meta)
 }
 
@@ -187,31 +173,15 @@ func (h *BookingHandler) CancelBooking(c echo.Context) error {
 // @Failure 403 {object} map[string]interface{} "Forbidden"
 // @Router /admin/bookings [get]
 func (h *BookingHandler) GetAllBookings(c echo.Context) error {
-	page := myRequest.QueryInt(c, "page", 1)
-	limit := myRequest.QueryInt(c, "limit", 10)
-
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 100 {
-		limit = 10
-	}
-
+	params := utils.ParsePagination(c)
 	role := echomw.CurrentRole(c)
 
-	bookings, err := h.bookingService.GetAllBookings(model.UserRole(role), limit, (page-1)*limit)
+	bookings, err := h.bookingService.GetAllBookings(model.UserRole(role), params.Limit, params.Offset)
 	if err != nil {
 		return myResponse.Forbidden(c, err.Error())
 	}
 
-	totalCount := int64(len(bookings))
-	meta := map[string]any{
-		"page":        page,
-		"limit":       limit,
-		"total":       totalCount,
-		"total_pages": (totalCount + int64(limit) - 1) / int64(limit),
-	}
-
+	meta := utils.CreateMeta(params, int64(len(bookings)))
 	return myResponse.Paginated(c, "Bookings retrieved successfully", bookings, meta)
 }
 

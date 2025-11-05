@@ -7,6 +7,7 @@ import (
 	"github.com/Yoochan45/go-game-rental-api/internal/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
+	"github.com/Yoochan45/go-game-rental-api/internal/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 )
@@ -57,12 +58,12 @@ func (h *ReviewHandler) CreateReview(c echo.Context) error {
 
 	reviewData := &model.Review{
 		Rating:  req.Rating,
-		Comment: &req.Comment,
+		Comment: utils.PtrOrNil(req.Comment),
 	}
 
 	err := h.reviewService.CreateReview(userID, bookingID, reviewData)
 	if err != nil {
-		return myResponse.BadRequest(c, err.Error())
+		return myResponse.Forbidden(c, err.Error())
 	}
 
 	return myResponse.Created(c, "Review created successfully", nil)
@@ -87,28 +88,13 @@ func (h *ReviewHandler) GetGameReviews(c echo.Context) error {
 		return myResponse.BadRequest(c, "Invalid game ID")
 	}
 
-	page := myRequest.QueryInt(c, "page", 1)
-	limit := myRequest.QueryInt(c, "limit", 10)
+	params := utils.ParsePagination(c)
 
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 100 {
-		limit = 10
-	}
-
-	reviews, err := h.reviewService.GetGameReviews(gameID, limit, (page-1)*limit)
+	reviews, err := h.reviewService.GetGameReviews(gameID, params.Limit, params.Offset)
 	if err != nil {
 		return myResponse.InternalServerError(c, "Failed to retrieve reviews")
 	}
 
-	totalCount := int64(len(reviews))
-	meta := map[string]any{
-		"page":        page,
-		"limit":       limit,
-		"total":       totalCount,
-		"total_pages": (totalCount + int64(limit) - 1) / int64(limit),
-	}
-
+	meta := utils.CreateMeta(params, int64(len(reviews)))
 	return myResponse.Paginated(c, "Reviews retrieved successfully", reviews, meta)
 }

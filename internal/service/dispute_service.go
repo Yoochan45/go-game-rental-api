@@ -5,6 +5,7 @@ import (
 
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
 	"github.com/Yoochan45/go-game-rental-api/internal/repository"
+	"gorm.io/gorm"
 )
 
 var (
@@ -35,7 +36,11 @@ func (s *disputeService) CreateDispute(reporterID uint, bookingID uint, disputeD
 	// Validate booking exists
 	booking, err := s.bookingRepo.GetByID(bookingID)
 	if err != nil {
-		return ErrBookingNotFound
+		// Preserve original DB errors; only map "not found" to domain error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrBookingNotFound
+		}
+		return err
 	}
 
 	// Check if user is involved in the booking (either customer or partner)

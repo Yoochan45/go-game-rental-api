@@ -7,6 +7,7 @@ import (
 	"github.com/Yoochan45/go-game-rental-api/internal/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
+	"github.com/Yoochan45/go-game-rental-api/internal/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 )
@@ -88,18 +89,9 @@ func (h *DisputeHandler) GetMyDisputes(c echo.Context) error {
 		return myResponse.Unauthorized(c, "Unauthorized")
 	}
 
-	page := myRequest.QueryInt(c, "page", 1)
-	limit := myRequest.QueryInt(c, "limit", 10)
+	params := utils.ParsePagination(c)
 
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 100 {
-		limit = 10
-	}
-
-	role := echomw.CurrentRole(c)
-	disputes, err := h.disputeService.GetAllDisputes(model.UserRole(role), limit, (page-1)*limit)
+	disputes, err := h.disputeService.GetAllDisputes(model.RoleCustomer, params.Limit, params.Offset)
 	if err != nil {
 		return myResponse.InternalServerError(c, "Failed to retrieve disputes")
 	}
@@ -107,20 +99,12 @@ func (h *DisputeHandler) GetMyDisputes(c echo.Context) error {
 	// Filter by current user
 	var userDisputes []*model.Dispute
 	for _, dispute := range disputes {
-		// Booking is embedded struct, not pointer
-		if dispute.Booking.UserID == userID {
+		if dispute.ReporterID == userID {
 			userDisputes = append(userDisputes, dispute)
 		}
 	}
 
-	totalCount := int64(len(userDisputes))
-	meta := map[string]any{
-		"page":        page,
-		"limit":       limit,
-		"total":       totalCount,
-		"total_pages": (totalCount + int64(limit) - 1) / int64(limit),
-	}
-
+	meta := utils.CreateMeta(params, int64(len(userDisputes)))
 	return myResponse.Paginated(c, "Disputes retrieved successfully", userDisputes, meta)
 }
 
@@ -138,29 +122,14 @@ func (h *DisputeHandler) GetMyDisputes(c echo.Context) error {
 // @Failure 403 {object} map[string]interface{} "Forbidden"
 // @Router /admin/disputes [get]
 func (h *DisputeHandler) GetAllDisputes(c echo.Context) error {
-	page := myRequest.QueryInt(c, "page", 1)
-	limit := myRequest.QueryInt(c, "limit", 10)
-
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 100 {
-		limit = 10
-	}
-
+	params := utils.ParsePagination(c)
 	role := echomw.CurrentRole(c)
-	disputes, err := h.disputeService.GetAllDisputes(model.UserRole(role), limit, (page-1)*limit)
+
+	disputes, err := h.disputeService.GetAllDisputes(model.UserRole(role), params.Limit, params.Offset)
 	if err != nil {
 		return myResponse.Forbidden(c, err.Error())
 	}
 
-	totalCount := int64(len(disputes))
-	meta := map[string]any{
-		"page":        page,
-		"limit":       limit,
-		"total":       totalCount,
-		"total_pages": (totalCount + int64(limit) - 1) / int64(limit),
-	}
-
+	meta := utils.CreateMeta(params, int64(len(disputes)))
 	return myResponse.Paginated(c, "Disputes retrieved successfully", disputes, meta)
 }
