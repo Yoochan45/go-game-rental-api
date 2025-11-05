@@ -2,6 +2,8 @@ package dto
 
 import (
 	"time"
+
+	"github.com/Yoochan45/go-game-rental-api/internal/model"
 )
 
 type RegisterRequest struct {
@@ -18,9 +20,9 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	AccessToken string    `json:"access_token"`
-	User        *UserDTO  `json:"user"`
-	ExpiresAt   time.Time `json:"expires_at"`
+	AccessToken string      `json:"access_token"`
+	User        *model.User `json:"user"`
+	ExpiresAt   time.Time   `json:"expires_at"`
 }
 
 type RefreshTokenRequest struct {

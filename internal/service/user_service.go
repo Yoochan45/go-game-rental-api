@@ -118,7 +118,7 @@ func (s *userService) Login(loginData interface{}, jwtSecret string) (interface{
 	
 	return &dto.LoginResponse{
 		AccessToken: accessToken,
-		User:        dto.ToUserDTO(user),
+		User:        user,
 		ExpiresAt:   time.Now().Add(24 * time.Hour),
 	}, nil
 }

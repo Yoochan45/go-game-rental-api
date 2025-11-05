@@ -38,7 +38,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return myResponse.BadRequest(c, err.Error())
 	}
 
-	return myResponse.Created(c, "User registered successfully", dto.ToUserDTO(user))
+	return myResponse.Created(c, "User registered successfully", user)
 }
 
 func (h *AuthHandler) Login(c echo.Context) error {
