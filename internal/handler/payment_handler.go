@@ -4,8 +4,8 @@ import (
 	echomw "github.com/Yoochan45/go-api-utils/pkg-echo/middleware"
 	myRequest "github.com/Yoochan45/go-api-utils/pkg-echo/request"
 	myResponse "github.com/Yoochan45/go-api-utils/pkg-echo/response"
+	"github.com/Yoochan45/go-game-rental-api/internal/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
-	"github.com/Yoochan45/go-game-rental-api/internal/model/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
@@ -116,7 +116,7 @@ func (h *PaymentHandler) GetPaymentDetail(c echo.Context) error {
 	role := echomw.CurrentRole(c)
 	payment, err := h.paymentService.GetPaymentDetail(model.UserRole(role), paymentID)
 	if err != nil {
-		return myResponse.NotFound(c, err.Error())
+		return myResponse.Forbidden(c, err.Error())
 	}
 
 	return myResponse.Success(c, "Payment retrieved successfully", payment)

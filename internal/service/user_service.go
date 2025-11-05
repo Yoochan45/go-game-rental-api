@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Yoochan45/go-game-rental-api/internal/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
-	"github.com/Yoochan45/go-game-rental-api/internal/model/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/repository"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -52,33 +52,33 @@ func (s *userService) GetProfile(userID uint) (*model.User, error) {
 
 func (s *userService) UpdateProfile(userID uint, updateData interface{}) error {
 	req := updateData.(*dto.UpdateProfileRequest)
-	
+
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return ErrUserNotFound
 	}
-	
+
 	user.FullName = req.FullName
 	user.Phone = &req.Phone
 	user.Address = &req.Address
-	
+
 	return s.userRepo.Update(user)
 }
 
 func (s *userService) Register(registerData interface{}) (*model.User, error) {
 	req := registerData.(*dto.RegisterRequest)
-	
+
 	// Check if user exists
 	if _, err := s.userRepo.GetByEmail(req.Email); err == nil {
 		return nil, errors.New("email already exists")
 	}
-	
+
 	// Hash password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	user := &model.User{
 		Email:    req.Email,
 		Password: string(hashed),
@@ -87,35 +87,35 @@ func (s *userService) Register(registerData interface{}) (*model.User, error) {
 		Address:  &req.Address,
 		Role:     model.RoleCustomer,
 	}
-	
+
 	err = s.userRepo.Create(user)
 	return user, err
 }
 
 func (s *userService) Login(loginData interface{}, jwtSecret string) (interface{}, error) {
 	req := loginData.(*dto.LoginRequest)
-	
+
 	user, err := s.userRepo.GetByEmail(req.Email)
 	if err != nil {
 		return nil, errors.New("invalid credentials")
 	}
-	
+
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		return nil, errors.New("invalid credentials")
 	}
-	
+
 	// Generate JWT
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
 		"role":    user.Role,
 		"exp":     time.Now().Add(24 * time.Hour).Unix(),
 	})
-	
+
 	accessToken, err := token.SignedString([]byte(jwtSecret))
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &dto.LoginResponse{
 		AccessToken: accessToken,
 		User:        user,
@@ -137,7 +137,7 @@ func (s *userService) GetAllUsers(requestorRole model.UserRole, limit, offset in
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	count, err := s.userRepo.Count()
 	return users, count, err
 }

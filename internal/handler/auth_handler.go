@@ -2,7 +2,7 @@ package handler
 
 import (
 	myResponse "github.com/Yoochan45/go-api-utils/pkg-echo/response"
-	"github.com/Yoochan45/go-game-rental-api/internal/model/dto"
+	"github.com/Yoochan45/go-game-rental-api/internal/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"

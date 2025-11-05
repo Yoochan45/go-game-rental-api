@@ -89,7 +89,7 @@ func (h *AdminHandler) ApprovePartnerApplication(c echo.Context) error {
 
 	err := h.partnerService.ApproveApplication(adminID, model.UserRole(role), applicationID)
 	if err != nil {
-		return myResponse.BadRequest(c, err.Error())
+		return myResponse.Forbidden(c, err.Error())
 	}
 
 	return myResponse.Success(c, "Partner application approved successfully", nil)
@@ -130,7 +130,7 @@ func (h *AdminHandler) RejectPartnerApplication(c echo.Context) error {
 
 	err := h.partnerService.RejectApplication(adminID, model.UserRole(role), applicationID, req.RejectionReason)
 	if err != nil {
-		return myResponse.BadRequest(c, err.Error())
+		return myResponse.Forbidden(c, err.Error())
 	}
 
 	return myResponse.Success(c, "Partner application rejected successfully", nil)
@@ -201,7 +201,7 @@ func (h *AdminHandler) ApproveGameListing(c echo.Context) error {
 
 	err := h.gameService.ApproveGame(adminID, model.UserRole(role), gameID)
 	if err != nil {
-		return myResponse.BadRequest(c, err.Error())
+		return myResponse.Forbidden(c, err.Error())
 	}
 
 	return myResponse.Success(c, "Game listing approved successfully", nil)

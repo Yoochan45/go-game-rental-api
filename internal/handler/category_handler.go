@@ -4,8 +4,8 @@ import (
 	echomw "github.com/Yoochan45/go-api-utils/pkg-echo/middleware"
 	myRequest "github.com/Yoochan45/go-api-utils/pkg-echo/request"
 	myResponse "github.com/Yoochan45/go-api-utils/pkg-echo/response"
+	"github.com/Yoochan45/go-game-rental-api/internal/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
-	"github.com/Yoochan45/go-game-rental-api/internal/model/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
@@ -186,5 +186,3 @@ func (h *CategoryHandler) DeleteCategory(c echo.Context) error {
 
 	return myResponse.Success(c, "Category deleted successfully", nil)
 }
-
-

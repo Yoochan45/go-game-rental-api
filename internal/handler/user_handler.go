@@ -4,8 +4,8 @@ import (
 	echomw "github.com/Yoochan45/go-api-utils/pkg-echo/middleware"
 	myRequest "github.com/Yoochan45/go-api-utils/pkg-echo/request"
 	myResponse "github.com/Yoochan45/go-api-utils/pkg-echo/response"
+	"github.com/Yoochan45/go-game-rental-api/internal/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
-	"github.com/Yoochan45/go-game-rental-api/internal/model/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
@@ -152,7 +152,7 @@ func (h *UserHandler) GetUserDetail(c echo.Context) error {
 	role := echomw.CurrentRole(c)
 	user, err := h.userService.GetUserDetail(model.UserRole(role), userID)
 	if err != nil {
-		return myResponse.NotFound(c, err.Error())
+		return myResponse.Forbidden(c, err.Error())
 	}
 
 	return myResponse.Success(c, "User retrieved successfully", user)
@@ -191,7 +191,7 @@ func (h *UserHandler) UpdateUserRole(c echo.Context) error {
 	// UpdateUserRole only returns error, not (user, error)
 	err := h.userService.UpdateUserRole(model.UserRole(role), userID, req.Role)
 	if err != nil {
-		return myResponse.BadRequest(c, err.Error())
+		return myResponse.Forbidden(c, err.Error())
 	}
 
 	// Get updated user for response
@@ -227,7 +227,7 @@ func (h *UserHandler) ToggleUserStatus(c echo.Context) error {
 	// ToggleUserStatus only returns error, not (user, error)
 	err := h.userService.ToggleUserStatus(model.UserRole(role), userID)
 	if err != nil {
-		return myResponse.BadRequest(c, err.Error())
+		return myResponse.Forbidden(c, err.Error())
 	}
 
 	// Get updated user for response
@@ -265,7 +265,7 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 	// Fix argument order: (requestorID, requestorRole, targetUserID)
 	err := h.userService.DeleteUser(currentUserID, model.UserRole(role), userID)
 	if err != nil {
-		return myResponse.BadRequest(c, err.Error())
+		return myResponse.Forbidden(c, err.Error())
 	}
 
 	return myResponse.Success(c, "User deleted successfully", nil)
