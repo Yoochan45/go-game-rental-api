@@ -27,7 +27,7 @@ type CreatePaymentRequest struct {
 type PaymentWebhookRequest struct {
 	ProviderPaymentID string  `json:"provider_payment_id" validate:"required"`
 	Status            string  `json:"status" validate:"required"`
-	PaymentMethod     string  `json:"payment_method,omitempty"`
+	PaymentMethod     *string `json:"payment_method,omitempty"`
 	FailureReason     *string `json:"failure_reason,omitempty"`
 }
 
