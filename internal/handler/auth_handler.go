@@ -4,10 +4,7 @@
 // @termsOfService http://swagger.io/terms/
 
 // @contact.name API Support
-// @contact.email support@gamerental.com
-
-// @license.name MIT
-// @license.url https://opensource.org/licenses/MIT
+// @contact.email yaya45chan@gmail.com
 
 // @host localhost:8080
 // @BasePath /
