@@ -29,11 +29,6 @@ type CreateDisputeRequest struct {
 	Description string            `json:"description" validate:"required,min=10"`
 }
 
-type ResolveDisputeRequest struct {
-	Action     string `json:"action" validate:"required,oneof=investigate resolve close"`
-	Resolution string `json:"resolution,omitempty" validate:"required_if=Action resolve,required_if=Action close"`
-}
-
 
 func ToDisputeDTO(dispute *model.Dispute) *DisputeDTO {
 	if dispute == nil {

@@ -5,7 +5,6 @@ import (
 
 	myOrm "github.com/Yoochan45/go-api-utils/pkg-echo/orm"
 	myConfig "github.com/Yoochan45/go-api-utils/pkg/config"
-	"github.com/sirupsen/logrus"
 	"github.com/Yoochan45/go-game-rental-api/app/echo-server/router"
 	"github.com/Yoochan45/go-game-rental-api/internal/handler"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
@@ -13,6 +12,7 @@ import (
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/sirupsen/logrus"
 	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
@@ -20,7 +20,7 @@ func main() {
 	// Setup logrus
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logrus.SetLevel(logrus.InfoLevel)
-	
+
 	cfg := myConfig.LoadEnv()
 	JwtSecret := os.Getenv("JWT_SECRET")
 	if JwtSecret == "" {
@@ -47,7 +47,6 @@ func main() {
 	)
 	if err != nil {
 		logrus.Warn("Migration warning:", err)
-		// Continue even if tables already exist
 	}
 
 	// Initialize repositories

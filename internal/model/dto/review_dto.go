@@ -24,12 +24,6 @@ type CreateReviewRequest struct {
 	Comment string `json:"comment,omitempty"`
 }
 
-type UpdateReviewRequest struct {
-	Rating  int    `json:"rating" validate:"required,min=1,max=5"`
-	Comment string `json:"comment,omitempty"`
-}
-
-
 func ToReviewDTO(review *model.Review) *ReviewDTO {
 	if review == nil {
 		return nil
@@ -57,9 +51,4 @@ func ToReviewDTOList(reviews []*model.Review) []*ReviewDTO {
 	return result
 }
 
-func FromCreateReviewRequest(req *CreateReviewRequest) *model.Review {
-	return &model.Review{
-		Rating:  req.Rating,
-		Comment: &req.Comment,
-	}
-}
+

@@ -20,9 +20,6 @@ type PaymentService interface {
 	CreatePayment(userID uint, bookingID uint, provider model.PaymentProvider) (*model.Payment, error)
 	GetPaymentByBooking(userID uint, bookingID uint) (*model.Payment, error)
 
-	// Partner methods
-	GetPartnerPayments(partnerID uint, limit, offset int) ([]*model.Payment, error)
-
 	// Admin methods
 	GetAllPayments(requestorRole model.UserRole, limit, offset int) ([]*model.Payment, error)
 	GetPaymentsByStatus(requestorRole model.UserRole, status model.PaymentStatus, limit, offset int) ([]*model.Payment, error)
@@ -103,34 +100,6 @@ func (s *paymentService) GetPaymentByBooking(userID uint, bookingID uint) (*mode
 	}
 
 	return s.paymentRepo.GetByBookingID(bookingID)
-}
-
-func (s *paymentService) GetPartnerPayments(partnerID uint, limit, offset int) ([]*model.Payment, error) {
-	// This would require a more complex query joining through bookings
-	// For now, let's get partner bookings and their payments
-	bookings, err := s.bookingRepo.GetPartnerBookings(partnerID, 1000, 0) // Get all partner bookings
-	if err != nil {
-		return nil, err
-	}
-
-	var payments []*model.Payment
-	for _, booking := range bookings {
-		if booking.Payment != nil {
-			payments = append(payments, booking.Payment)
-		}
-	}
-
-	// Apply pagination manually (in real implementation, should be done in repository)
-	start := offset
-	end := offset + limit
-	if start > len(payments) {
-		return []*model.Payment{}, nil
-	}
-	if end > len(payments) {
-		end = len(payments)
-	}
-
-	return payments[start:end], nil
 }
 
 func (s *paymentService) GetAllPayments(requestorRole model.UserRole, limit, offset int) ([]*model.Payment, error) {
