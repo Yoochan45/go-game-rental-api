@@ -31,6 +31,8 @@ type GameRepository interface {
 	UpdateStock(gameID uint, newStock int) error
 	UpdateAvailableStock(gameID uint, newAvailableStock int) error
 	CheckAvailability(gameID uint, quantity int) (bool, error)
+	ReserveStock(gameID uint, quantity int) error
+	ReleaseStock(gameID uint, quantity int) error
 
 	// Statistics
 	CountByPartner(partnerID uint) (int64, error)
@@ -179,6 +181,16 @@ func (r *gameRepository) CheckAvailability(gameID uint, quantity int) (bool, err
 		return false, err
 	}
 	return game.AvailableStock >= quantity, nil
+}
+
+func (r *gameRepository) ReserveStock(gameID uint, quantity int) error {
+	return r.db.Model(&model.Game{}).Where("id = ?", gameID).
+		Update("available_stock", gorm.Expr("available_stock - ?", quantity)).Error
+}
+
+func (r *gameRepository) ReleaseStock(gameID uint, quantity int) error {
+	return r.db.Model(&model.Game{}).Where("id = ?", gameID).
+		Update("available_stock", gorm.Expr("LEAST(available_stock + ?, stock)", quantity)).Error
 }
 
 // Statistics
