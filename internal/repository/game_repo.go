@@ -144,12 +144,13 @@ func (r *gameRepository) UpdateApprovalStatus(gameID uint, status model.Approval
 		"approval_status": status,
 	}
 
-	if status == model.ApprovalApproved {
+	switch status {
+	case model.ApprovalApproved:
 		updates["approved_by"] = approvedBy
 		updates["approved_at"] = gorm.Expr("CURRENT_TIMESTAMP")
 		updates["is_active"] = true
 		updates["rejection_reason"] = nil
-	} else if status == model.ApprovalRejected {
+	case model.ApprovalRejected:
 		updates["rejection_reason"] = rejectionReason
 		updates["is_active"] = false
 	}
