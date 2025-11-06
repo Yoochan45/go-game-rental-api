@@ -18,7 +18,13 @@ const (
 	maxRetries  = 3
 )
 
-type SupabaseStorageClient struct {
+type StorageRepository interface {
+	UploadFile(ctx context.Context, destinationPath string, fileName string, contentType string, data []byte) (string, error)
+	DeleteFile(ctx context.Context, destinationPath string) error
+	GetPublicURL(path string) string
+}
+
+type SupabaseRepository struct {
 	baseURL   string
 	apiKey    string
 	bucket    string
@@ -26,7 +32,7 @@ type SupabaseStorageClient struct {
 	publicURL string
 }
 
-func NewSupabaseStorageClient() (*SupabaseStorageClient, error) {
+func NewSupabaseRepository() (*SupabaseRepository, error) {
 	baseURL := os.Getenv("SUPABASE_URL")
 	apiKey := os.Getenv("SUPABASE_SERVICE_KEY")
 	bucket := os.Getenv("SUPABASE_STORAGE_BUCKET")
@@ -37,7 +43,7 @@ func NewSupabaseStorageClient() (*SupabaseStorageClient, error) {
 
 	publicURL := fmt.Sprintf("%s/storage/v1/object/public/%s", baseURL, bucket)
 
-	return &SupabaseStorageClient{
+	return &SupabaseRepository{
 		baseURL:   baseURL,
 		apiKey:    apiKey,
 		bucket:    bucket,
@@ -48,7 +54,7 @@ func NewSupabaseStorageClient() (*SupabaseStorageClient, error) {
 	}, nil
 }
 
-func (s *SupabaseStorageClient) UploadFile(ctx context.Context, destinationPath string, fileName string, contentType string, data []byte) (string, error) {
+func (s *SupabaseRepository) UploadFile(ctx context.Context, destinationPath string, fileName string, contentType string, data []byte) (string, error) {
 	if len(data) == 0 {
 		return "", fmt.Errorf("empty data provided")
 	}
@@ -118,7 +124,7 @@ func (s *SupabaseStorageClient) UploadFile(ctx context.Context, destinationPath 
 	return "", fmt.Errorf("upload failed after %d attempts: %w", maxRetries, lastErr)
 }
 
-func (s *SupabaseStorageClient) DeleteFile(ctx context.Context, destinationPath string) error {
+func (s *SupabaseRepository) DeleteFile(ctx context.Context, destinationPath string) error {
 	if s.baseURL == "" || s.apiKey == "" || s.bucket == "" {
 		return fmt.Errorf("supabase storage not configured")
 	}
@@ -152,9 +158,35 @@ func (s *SupabaseStorageClient) DeleteFile(ctx context.Context, destinationPath 
 	return nil
 }
 
-
-
-// GetPublicURL helper untuk mendapatkan public URL dari path
-func (s *SupabaseStorageClient) GetPublicURL(path string) string {
+func (s *SupabaseRepository) GetPublicURL(path string) string {
 	return fmt.Sprintf("%s/%s", s.publicURL, path)
+}
+
+type MockStorageRepository struct {
+	UploadedFiles []MockFile
+}
+
+type MockFile struct {
+	Path        string
+	FileName    string
+	ContentType string
+	Data        []byte
+}
+
+func (m *MockStorageRepository) UploadFile(ctx context.Context, destinationPath string, fileName string, contentType string, data []byte) (string, error) {
+	m.UploadedFiles = append(m.UploadedFiles, MockFile{
+		Path:        destinationPath,
+		FileName:    fileName,
+		ContentType: contentType,
+		Data:        data,
+	})
+	return "https://mock-storage.com/" + destinationPath, nil
+}
+
+func (m *MockStorageRepository) DeleteFile(ctx context.Context, destinationPath string) error {
+	return nil
+}
+
+func (m *MockStorageRepository) GetPublicURL(path string) string {
+	return "https://mock-storage.com/" + path
 }

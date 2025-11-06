@@ -5,7 +5,7 @@ import (
 
 	myResponse "github.com/Yoochan45/go-api-utils/pkg-echo/response"
 	"github.com/Yoochan45/go-game-rental-api/internal/dto"
-	"github.com/Yoochan45/go-game-rental-api/internal/integration/email"
+	"github.com/Yoochan45/go-game-rental-api/internal/repository/email"
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
 	"github.com/Yoochan45/go-game-rental-api/internal/utils"
 	"github.com/go-playground/validator/v10"
@@ -17,15 +17,15 @@ type AuthHandler struct {
 	userService service.UserService
 	jwtSecret   string
 	validate    *validator.Validate
-	emailSender email.EmailSender
+	emailRepo email.EmailRepository
 }
 
-func NewAuthHandler(userService service.UserService, jwtSecret string, emailSender email.EmailSender) *AuthHandler {
+func NewAuthHandler(userService service.UserService, jwtSecret string, emailRepo email.EmailRepository) *AuthHandler {
 	return &AuthHandler{
 		userService: userService,
 		jwtSecret:   jwtSecret,
 		validate:    utils.GetValidator(),
-		emailSender: emailSender,
+		emailRepo: emailRepo,
 	}
 }
 
@@ -64,7 +64,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		`, user.FullName)
 		plainText := fmt.Sprintf("Welcome %s! Thank you for registering at Game Rental Platform.", user.FullName)
 
-		if err := h.emailSender.SendEmail(c.Request().Context(), user.Email, subject, plainText, htmlContent); err != nil {
+		if err := h.emailRepo.SendEmail(c.Request().Context(), user.Email, subject, plainText, htmlContent); err != nil {
 			logrus.WithError(err).Error("Failed to send welcome email")
 		}
 	}()
@@ -108,7 +108,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		`
 		plainText := "Someone just logged into your Game Rental account. If this wasn't you, please contact support."
 
-		if err := h.emailSender.SendEmail(c.Request().Context(), req.Email, subject, plainText, htmlContent); err != nil {
+		if err := h.emailRepo.SendEmail(c.Request().Context(), req.Email, subject, plainText, htmlContent); err != nil {
 			logrus.WithError(err).Error("Failed to send login notification email")
 		}
 	}()

@@ -17,13 +17,18 @@ var (
 	emailRegex   = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 )
 
-type SendGridClient struct {
+type EmailRepository interface {
+	SendEmail(ctx context.Context, to, subject, plainText, htmlContent string) error
+	SendWithTemplate(ctx context.Context, to, templateID string, dynamicData map[string]interface{}) error
+}
+
+type SendGridRepository struct {
 	client   *sendgrid.Client
 	fromName string
 	fromAddr string
 }
 
-func NewSendGridClient() (*SendGridClient, error) {
+func NewSendGridRepository() (*SendGridRepository, error) {
 	apiKey := os.Getenv("SENDGRID_API_KEY")
 	fromAddr := os.Getenv("SENDGRID_FROM_EMAIL")
 	fromName := os.Getenv("SENDGRID_FROM_NAME")
@@ -35,14 +40,14 @@ func NewSendGridClient() (*SendGridClient, error) {
 		fromName = "Game Rental"
 	}
 
-	return &SendGridClient{
+	return &SendGridRepository{
 		client:   sendgrid.NewSendClient(apiKey),
 		fromName: fromName,
 		fromAddr: fromAddr,
 	}, nil
 }
 
-func (s *SendGridClient) SendEmail(ctx context.Context, to, subject, plainText, htmlContent string) error {
+func (s *SendGridRepository) SendEmail(ctx context.Context, to, subject, plainText, htmlContent string) error {
 	_ = ctx // ctx unused - SendGrid client doesn't support context timeout
 	if !isValidEmail(to) {
 		return fmt.Errorf("invalid email address: %s", to)
@@ -77,7 +82,7 @@ func (s *SendGridClient) SendEmail(ctx context.Context, to, subject, plainText, 
 	return nil
 }
 
-func (s *SendGridClient) SendWithTemplate(ctx context.Context, to, templateID string, dynamicData map[string]interface{}) error {
+func (s *SendGridRepository) SendWithTemplate(ctx context.Context, to, templateID string, dynamicData map[string]interface{}) error {
 	_ = ctx // ctx unused - SendGrid client doesn't support context timeout
 	if s.client == nil || s.fromAddr == "" {
 		return fmt.Errorf("sendgrid not configured")
@@ -116,6 +121,38 @@ func (s *SendGridClient) SendWithTemplate(ctx context.Context, to, templateID st
 		"to":         to,
 		"template_id": templateID,
 	}).Info("Template email sent successfully")
+	return nil
+}
+
+type MockEmailRepository struct {
+	SentEmails []MockEmail
+}
+
+type MockEmail struct {
+	To          string
+	Subject     string
+	PlainText   string
+	HTMLContent string
+	TemplateID  string
+	Data        map[string]interface{}
+}
+
+func (m *MockEmailRepository) SendEmail(ctx context.Context, to, subject, plainText, htmlContent string) error {
+	m.SentEmails = append(m.SentEmails, MockEmail{
+		To:          to,
+		Subject:     subject,
+		PlainText:   plainText,
+		HTMLContent: htmlContent,
+	})
+	return nil
+}
+
+func (m *MockEmailRepository) SendWithTemplate(ctx context.Context, to, templateID string, dynamicData map[string]interface{}) error {
+	m.SentEmails = append(m.SentEmails, MockEmail{
+		To:         to,
+		TemplateID: templateID,
+		Data:       dynamicData,
+	})
 	return nil
 }
 

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Yoochan45/go-game-rental-api/internal/integration/payment"
+	"github.com/Yoochan45/go-game-rental-api/internal/repository/transaction"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
 	"github.com/Yoochan45/go-game-rental-api/internal/repository"
 )
@@ -36,7 +36,7 @@ type paymentService struct {
 	bookingRepo     repository.BookingRepository
 	userRepo        repository.UserRepository
 	bookingService  BookingService
-	paymentGateway  payment.PaymentGateway
+	transactionRepo transaction.TransactionRepository
 }
 
 func NewPaymentService(
@@ -44,14 +44,14 @@ func NewPaymentService(
 	bookingRepo repository.BookingRepository,
 	userRepo repository.UserRepository,
 	bookingService BookingService,
-	paymentGateway payment.PaymentGateway,
+	transactionRepo transaction.TransactionRepository,
 ) PaymentService {
 	return &paymentService{
 		paymentRepo:     paymentRepo,
 		bookingRepo:     bookingRepo,
 		userRepo:        userRepo,
 		bookingService:  bookingService,
-		paymentGateway:  paymentGateway,
+		transactionRepo: transactionRepo,
 	}
 }
 
@@ -101,7 +101,7 @@ func (s *paymentService) CreatePayment(userID uint, bookingID uint, provider mod
 		}
 	}
 
-	txID, _, err := s.paymentGateway.CreateCharge(
+	txID, _, err := s.transactionRepo.CreateCharge(
 		context.Background(),
 		orderID,
 		int64(payment.Amount), // Rupiah penuh sesuai API Midtrans

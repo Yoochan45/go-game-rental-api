@@ -1,4 +1,4 @@
-package payment
+package transaction
 
 import (
 	"context"
@@ -13,14 +13,18 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type MidtransClient struct {
+type TransactionRepository interface {
+	CreateCharge(ctx context.Context, orderID string, grossAmount int64, paymentType string, params map[string]interface{}) (string, string, error)
+	GetStatus(ctx context.Context, transactionID string) (string, error)
+	VerifyNotification(orderID, statusCode, grossAmount, signatureKey string) bool
+}
+
+type MidtransRepository struct {
 	core      *coreapi.Client
 	serverKey string
 }
 
-
-
-func NewMidtransClient() (*MidtransClient, error) {
+func NewMidtransRepository() (*MidtransRepository, error) {
 	key := os.Getenv("MIDTRANS_SERVER_KEY")
 	env := os.Getenv("MIDTRANS_ENV")
 
@@ -35,14 +39,13 @@ func NewMidtransClient() (*MidtransClient, error) {
 		c.New(key, midtrans.Sandbox)
 	}
 
-	return &MidtransClient{
+	return &MidtransRepository{
 		core:      &c,
 		serverKey: key,
 	}, nil
 }
 
-// CreateCharge creates payment charge. Note: ctx is accepted but Midtrans SDK ignores it.
-func (m *MidtransClient) CreateCharge(ctx context.Context, orderID string, grossAmount int64, paymentType string, params map[string]interface{}) (string, string, error) {
+func (m *MidtransRepository) CreateCharge(ctx context.Context, orderID string, grossAmount int64, paymentType string, params map[string]interface{}) (string, string, error) {
 	_ = ctx // ctx unused - Midtrans SDK doesn't support context
 	// Log unknown payment types but allow them
 	knownTypes := map[string]bool{
@@ -82,6 +85,53 @@ func (m *MidtransClient) CreateCharge(ctx context.Context, orderID string, gross
 	return resp.TransactionID, redirect, nil
 }
 
+func (m *MidtransRepository) GetStatus(ctx context.Context, transactionID string) (string, error) {
+	_ = ctx // ctx unused - Midtrans SDK doesn't support context
+	resp, err := m.core.CheckTransaction(transactionID)
+	if err != nil {
+		logrus.WithError(err).WithField("transaction_id", transactionID).Error("Midtrans status check failed")
+		return "", fmt.Errorf("failed to check payment status: %w", err)
+	}
+	return resp.TransactionStatus, nil
+}
+
+func (m *MidtransRepository) VerifyNotification(orderID, statusCode, grossAmount, signatureKey string) bool {
+	sum := sha512.Sum512([]byte(orderID + statusCode + grossAmount + m.serverKey))
+	expected := hex.EncodeToString(sum[:])
+	return strings.EqualFold(expected, signatureKey)
+}
+
+type MockTransactionRepository struct {
+	Charges []MockCharge
+}
+
+type MockCharge struct {
+	OrderID     string
+	Amount      int64
+	PaymentType string
+	Params      map[string]interface{}
+}
+
+func (m *MockTransactionRepository) CreateCharge(ctx context.Context, orderID string, grossAmount int64, paymentType string, params map[string]interface{}) (string, string, error) {
+	_ = ctx // ctx unused in mock
+	m.Charges = append(m.Charges, MockCharge{
+		OrderID:     orderID,
+		Amount:      grossAmount,
+		PaymentType: paymentType,
+		Params:      params,
+	})
+	return "mock-tx-" + orderID, "https://mock-payment.com/redirect", nil
+}
+
+func (m *MockTransactionRepository) GetStatus(ctx context.Context, transactionID string) (string, error) {
+	_ = ctx // ctx unused in mock
+	return "paid", nil // Always paid for testing
+}
+
+func (m *MockTransactionRepository) VerifyNotification(orderID, statusCode, grossAmount, signatureKey string) bool {
+	return true // Always valid for testing
+}
+
 // MapStatusToInternal maps Midtrans status to internal status
 func MapStatusToInternal(midtransStatus string) string {
 	switch midtransStatus {
@@ -94,21 +144,4 @@ func MapStatusToInternal(midtransStatus string) string {
 	default:
 		return midtransStatus
 	}
-}
-
-func (m *MidtransClient) GetStatus(ctx context.Context, transactionID string) (string, error) {
-	_ = ctx // ctx unused - Midtrans SDK doesn't support context
-	resp, err := m.core.CheckTransaction(transactionID)
-	if err != nil {
-		logrus.WithError(err).WithField("transaction_id", transactionID).Error("Midtrans status check failed")
-		return "", fmt.Errorf("failed to check payment status: %w", err)
-	}
-	return resp.TransactionStatus, nil
-}
-
-// VerifyNotification: signature = sha512(order_id + status_code + gross_amount + server_key)
-func (m *MidtransClient) VerifyNotification(orderID, statusCode, grossAmount, signatureKey string) bool {
-	sum := sha512.Sum512([]byte(orderID + statusCode + grossAmount + m.serverKey))
-	expected := hex.EncodeToString(sum[:])
-	return strings.EqualFold(expected, signatureKey)
 }

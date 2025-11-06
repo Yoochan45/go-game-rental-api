@@ -11,7 +11,7 @@ import (
 	myRequest "github.com/Yoochan45/go-api-utils/pkg-echo/request"
 	myResponse "github.com/Yoochan45/go-api-utils/pkg-echo/response"
 	"github.com/Yoochan45/go-game-rental-api/internal/dto"
-	"github.com/Yoochan45/go-game-rental-api/internal/integration/storage"
+	"github.com/Yoochan45/go-game-rental-api/internal/repository/storage"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
 	"github.com/Yoochan45/go-game-rental-api/internal/utils"
@@ -23,14 +23,14 @@ import (
 type GameHandler struct {
 	gameService   service.GameService
 	validate      *validator.Validate
-	storageClient storage.StorageClient
+	storageRepo storage.StorageRepository
 }
 
-func NewGameHandler(gameService service.GameService, storageClient storage.StorageClient) *GameHandler {
+func NewGameHandler(gameService service.GameService, storageRepo storage.StorageRepository) *GameHandler {
 	return &GameHandler{
 		gameService:   gameService,
 		validate:      utils.GetValidator(),
-		storageClient: storageClient,
+		storageRepo: storageRepo,
 	}
 }
 
@@ -300,7 +300,7 @@ func (h *GameHandler) UploadGameImage(c echo.Context) error {
 	destinationPath := fmt.Sprintf("games/%s", filename)
 
 	// Upload to storage
-	imageURL, err := h.storageClient.UploadFile(
+	imageURL, err := h.storageRepo.UploadFile(
 		c.Request().Context(),
 		destinationPath,
 		filename,

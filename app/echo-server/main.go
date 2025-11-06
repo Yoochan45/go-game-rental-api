@@ -28,9 +28,9 @@ import (
 	"github.com/Yoochan45/go-game-rental-api/app/echo-server/router"
 	_ "github.com/Yoochan45/go-game-rental-api/docs"
 	"github.com/Yoochan45/go-game-rental-api/internal/handler"
-	"github.com/Yoochan45/go-game-rental-api/internal/integration/email"
-	"github.com/Yoochan45/go-game-rental-api/internal/integration/payment"
-	"github.com/Yoochan45/go-game-rental-api/internal/integration/storage"
+	"github.com/Yoochan45/go-game-rental-api/internal/repository/email"
+	"github.com/Yoochan45/go-game-rental-api/internal/repository/storage"
+	"github.com/Yoochan45/go-game-rental-api/internal/repository/transaction"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
 	"github.com/Yoochan45/go-game-rental-api/internal/repository"
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
@@ -85,31 +85,31 @@ func main() {
 	partnerRepo := repository.NewPartnerApplicationRepository(db)
 	disputeRepo := repository.NewDisputeRepository(db)
 
-	// Initialize 3rd party integrations with fallback to mock
-	var emailSender email.EmailSender
-	var storageClient storage.StorageClient
-	var paymentGateway payment.PaymentGateway
+	// Initialize 3rd party repositories with fallback to mock
+	var emailRepo email.EmailRepository
+	var storageRepo storage.StorageRepository
+	var transactionRepo transaction.TransactionRepository
 
-	// Try real clients, fallback to mock on error
-	if client, err := email.NewSendGridClient(); err != nil {
+	// Try real repositories, fallback to mock on error
+	if repo, err := email.NewSendGridRepository(); err != nil {
 		logrus.Warn("SendGrid failed, using mock:", err)
-		emailSender = &email.MockEmailSender{}
+		emailRepo = &email.MockEmailRepository{}
 	} else {
-		emailSender = client
+		emailRepo = repo
 	}
 
-	if client, err := storage.NewSupabaseStorageClient(); err != nil {
+	if repo, err := storage.NewSupabaseRepository(); err != nil {
 		logrus.Warn("Supabase failed, using mock:", err)
-		storageClient = &storage.MockStorageClient{}
+		storageRepo = &storage.MockStorageRepository{}
 	} else {
-		storageClient = client
+		storageRepo = repo
 	}
 
-	if client, err := payment.NewMidtransClient(); err != nil {
+	if repo, err := transaction.NewMidtransRepository(); err != nil {
 		logrus.Warn("Midtrans failed, using mock:", err)
-		paymentGateway = &payment.MockPaymentGateway{}
+		transactionRepo = &transaction.MockTransactionRepository{}
 	} else {
-		paymentGateway = client
+		transactionRepo = repo
 	}
 
 	// Initialize services
@@ -117,16 +117,16 @@ func main() {
 	categoryService := service.NewCategoryService(categoryRepo)
 	gameService := service.NewGameService(gameRepo, userRepo)
 	bookingService := service.NewBookingService(bookingRepo, gameRepo, userRepo)
-	paymentService := service.NewPaymentService(paymentRepo, bookingRepo, userRepo, bookingService, paymentGateway)
+	paymentService := service.NewPaymentService(paymentRepo, bookingRepo, userRepo, bookingService, transactionRepo)
 	reviewService := service.NewReviewService(reviewRepo, bookingRepo)
 	partnerService := service.NewPartnerApplicationService(partnerRepo, userRepo)
 	disputeService := service.NewDisputeService(disputeRepo, bookingRepo)
 
 	// Initialize handlers
-	authHandler := handler.NewAuthHandler(userService, JwtSecret, emailSender)
+	authHandler := handler.NewAuthHandler(userService, JwtSecret, emailRepo)
 	userHandler := handler.NewUserHandler(userService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
-	gameHandler := handler.NewGameHandler(gameService, storageClient)
+	gameHandler := handler.NewGameHandler(gameService, storageRepo)
 	bookingHandler := handler.NewBookingHandler(bookingService)
 	paymentHandler := handler.NewPaymentHandler(paymentService)
 	reviewHandler := handler.NewReviewHandler(reviewService)
