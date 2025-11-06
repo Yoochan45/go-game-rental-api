@@ -88,12 +88,12 @@ func (h *PartnerHandler) GetPartnerBookings(c echo.Context) error {
 
 	params := utils.ParsePagination(c)
 
-	bookings, err := h.bookingService.GetPartnerBookings(userID, params.Limit, params.Offset)
+	bookings, total, err := h.bookingService.GetPartnerBookings(userID, params.Limit, params.Offset)
 	if err != nil {
 		return myResponse.InternalServerError(c, "Failed to retrieve bookings")
 	}
 
-	meta := utils.CreateMeta(params, int64(len(bookings)))
+	meta := utils.CreateMeta(params, total)
 	return myResponse.Paginated(c, "Partner bookings retrieved successfully", bookings, meta)
 }
 

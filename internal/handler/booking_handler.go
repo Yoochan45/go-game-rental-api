@@ -176,12 +176,12 @@ func (h *BookingHandler) GetAllBookings(c echo.Context) error {
 	params := utils.ParsePagination(c)
 	role := echomw.CurrentRole(c)
 
-	bookings, err := h.bookingService.GetAllBookings(model.UserRole(role), params.Limit, params.Offset)
+	bookings, total, err := h.bookingService.GetAllBookings(model.UserRole(role), params.Limit, params.Offset)
 	if err != nil {
-		return myResponse.Forbidden(c, err.Error())
+		return utils.MapServiceError(c, err)
 	}
 
-	meta := utils.CreateMeta(params, int64(len(bookings)))
+	meta := utils.CreateMeta(params, total)
 	return myResponse.Paginated(c, "Bookings retrieved successfully", bookings, meta)
 }
 

@@ -175,12 +175,12 @@ func (h *PaymentHandler) GetAllPayments(c echo.Context) error {
 	params := utils.ParsePagination(c)
 	role := echomw.CurrentRole(c)
 
-	payments, err := h.paymentService.GetAllPayments(model.UserRole(role), params.Limit, params.Offset)
+	payments, total, err := h.paymentService.GetAllPayments(model.UserRole(role), params.Limit, params.Offset)
 	if err != nil {
-		return myResponse.Forbidden(c, err.Error())
+		return utils.MapServiceError(c, err)
 	}
 
-	meta := utils.CreateMeta(params, int64(len(payments)))
+	meta := utils.CreateMeta(params, total)
 	return myResponse.Paginated(c, "Payments retrieved successfully", payments, meta)
 }
 
@@ -203,11 +203,11 @@ func (h *PaymentHandler) GetPaymentsByStatus(c echo.Context) error {
 	status := c.QueryParam("status")
 	role := echomw.CurrentRole(c)
 
-	payments, err := h.paymentService.GetPaymentsByStatus(model.UserRole(role), model.PaymentStatus(status), params.Limit, params.Offset)
+	payments, total, err := h.paymentService.GetPaymentsByStatus(model.UserRole(role), model.PaymentStatus(status), params.Limit, params.Offset)
 	if err != nil {
-		return myResponse.Forbidden(c, err.Error())
+		return utils.MapServiceError(c, err)
 	}
 
-	meta := utils.CreateMeta(params, int64(len(payments)))
+	meta := utils.CreateMeta(params, total)
 	return myResponse.Paginated(c, "Payments retrieved successfully", payments, meta)
 }

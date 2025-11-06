@@ -11,6 +11,7 @@ import (
 	"github.com/Yoochan45/go-game-rental-api/internal/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
 	"github.com/Yoochan45/go-game-rental-api/internal/repository"
+	"github.com/Yoochan45/go-game-rental-api/internal/utils"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -68,8 +69,8 @@ func (s *userService) UpdateProfile(userID uint, updateData interface{}) error {
 	}
 
 	user.FullName = req.FullName
-	user.Phone = &req.Phone
-	user.Address = &req.Address
+	user.Phone = utils.PtrOrNil(req.Phone)
+	user.Address = utils.PtrOrNil(req.Address)
 
 	return s.userRepo.Update(user)
 }
@@ -95,7 +96,7 @@ func (s *userService) Register(registerData interface{}) (*model.User, error) {
 		Phone:    &req.Phone,
 		Address:  &req.Address,
 		Role:     model.RoleCustomer,
-		IsActive: false,
+		IsActive: true, // Auto-verify for development
 	}
 
 	err = s.userRepo.Create(user)

@@ -19,6 +19,11 @@ type BookingRepository interface {
 	GetUserBookings(userID uint, limit, offset int) ([]*model.Booking, error)
 	GetPartnerBookings(partnerID uint, limit, offset int) ([]*model.Booking, error)
 	GetBookingsByStatus(status model.BookingStatus, limit, offset int) ([]*model.Booking, error)
+	GetAllBookings(limit, offset int) ([]*model.Booking, error)
+	CountAllBookings() (int64, error)
+	CountUserBookings(userID uint) (int64, error)
+	CountPartnerBookings(partnerID uint) (int64, error)
+	CountByStatus(status model.BookingStatus) (int64, error)
 
 	// Status updates
 	UpdateStatus(bookingID uint, status model.BookingStatus) error
@@ -127,6 +132,37 @@ func (r *bookingRepository) CheckDateConflicts(gameID uint, startDate, endDate t
 	var count int64
 	err := query.Count(&count).Error
 	return count > 0, err
+}
+
+func (r *bookingRepository) GetAllBookings(limit, offset int) ([]*model.Booking, error) {
+	var bookings []*model.Booking
+	err := r.db.Preload("User").Preload("Game").Preload("Partner").
+		Order("created_at DESC").Limit(limit).Offset(offset).Find(&bookings).Error
+	return bookings, err
+}
+
+func (r *bookingRepository) CountAllBookings() (int64, error) {
+	var count int64
+	err := r.db.Model(&model.Booking{}).Count(&count).Error
+	return count, err
+}
+
+func (r *bookingRepository) CountUserBookings(userID uint) (int64, error) {
+	var count int64
+	err := r.db.Model(&model.Booking{}).Where("user_id = ?", userID).Count(&count).Error
+	return count, err
+}
+
+func (r *bookingRepository) CountPartnerBookings(partnerID uint) (int64, error) {
+	var count int64
+	err := r.db.Model(&model.Booking{}).Where("partner_id = ?", partnerID).Count(&count).Error
+	return count, err
+}
+
+func (r *bookingRepository) CountByStatus(status model.BookingStatus) (int64, error) {
+	var count int64
+	err := r.db.Model(&model.Booking{}).Where("status = ?", status).Count(&count).Error
+	return count, err
 }
 
 

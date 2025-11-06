@@ -27,13 +27,13 @@ type BookingService interface {
 	CancelBooking(userID uint, bookingID uint) error
 
 	// Partner methods
-	GetPartnerBookings(partnerID uint, limit, offset int) ([]*model.Booking, error)
+	GetPartnerBookings(partnerID uint, limit, offset int) ([]*model.Booking, int64, error)
 	ConfirmHandover(partnerID uint, bookingID uint) error
 	ConfirmReturn(partnerID uint, bookingID uint) error
 
 	// Admin methods
-	GetAllBookings(requestorRole model.UserRole, limit, offset int) ([]*model.Booking, error)
-	GetBookingsByStatus(requestorRole model.UserRole, status model.BookingStatus, limit, offset int) ([]*model.Booking, error)
+	GetAllBookings(requestorRole model.UserRole, limit, offset int) ([]*model.Booking, int64, error)
+	GetBookingsByStatus(requestorRole model.UserRole, status model.BookingStatus, limit, offset int) ([]*model.Booking, int64, error)
 	ForceUpdateBookingStatus(requestorRole model.UserRole, bookingID uint, status model.BookingStatus) error
 
 	// System methods (for payment service)
@@ -168,8 +168,14 @@ func (s *bookingService) CancelBooking(userID uint, bookingID uint) error {
 }
 
 // Partner methods
-func (s *bookingService) GetPartnerBookings(partnerID uint, limit, offset int) ([]*model.Booking, error) {
-	return s.bookingRepo.GetPartnerBookings(partnerID, limit, offset)
+func (s *bookingService) GetPartnerBookings(partnerID uint, limit, offset int) ([]*model.Booking, int64, error) {
+	bookings, err := s.bookingRepo.GetPartnerBookings(partnerID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	count, err := s.bookingRepo.CountPartnerBookings(partnerID)
+	return bookings, count, err
 }
 
 func (s *bookingService) ConfirmHandover(partnerID uint, bookingID uint) error {
@@ -217,21 +223,32 @@ func (s *bookingService) ConfirmReturn(partnerID uint, bookingID uint) error {
 }
 
 // Admin methods
-func (s *bookingService) GetAllBookings(requestorRole model.UserRole, limit, offset int) ([]*model.Booking, error) {
+func (s *bookingService) GetAllBookings(requestorRole model.UserRole, limit, offset int) ([]*model.Booking, int64, error) {
 	if !s.canManageBookings(requestorRole) {
-		return nil, ErrInsufficientPermission
+		return nil, 0, ErrInsufficientPermission
 	}
 
-	// Use GetBookingsByStatus with empty status to get all bookings
-	return s.bookingRepo.GetBookingsByStatus(model.BookingStatus(""), limit, offset)
+	bookings, err := s.bookingRepo.GetAllBookings(limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	count, err := s.bookingRepo.CountAllBookings()
+	return bookings, count, err
 }
 
-func (s *bookingService) GetBookingsByStatus(requestorRole model.UserRole, status model.BookingStatus, limit, offset int) ([]*model.Booking, error) {
+func (s *bookingService) GetBookingsByStatus(requestorRole model.UserRole, status model.BookingStatus, limit, offset int) ([]*model.Booking, int64, error) {
 	if !s.canManageBookings(requestorRole) {
-		return nil, ErrInsufficientPermission
+		return nil, 0, ErrInsufficientPermission
 	}
 
-	return s.bookingRepo.GetBookingsByStatus(status, limit, offset)
+	bookings, err := s.bookingRepo.GetBookingsByStatus(status, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	count, err := s.bookingRepo.CountByStatus(status)
+	return bookings, count, err
 }
 
 func (s *bookingService) ForceUpdateBookingStatus(requestorRole model.UserRole, bookingID uint, status model.BookingStatus) error {

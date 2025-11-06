@@ -23,8 +23,8 @@ type PaymentService interface {
 	GetPaymentByBooking(userID uint, bookingID uint) (*model.Payment, error)
 
 	// Admin methods
-	GetAllPayments(requestorRole model.UserRole, limit, offset int) ([]*model.Payment, error)
-	GetPaymentsByStatus(requestorRole model.UserRole, status model.PaymentStatus, limit, offset int) ([]*model.Payment, error)
+	GetAllPayments(requestorRole model.UserRole, limit, offset int) ([]*model.Payment, int64, error)
+	GetPaymentsByStatus(requestorRole model.UserRole, status model.PaymentStatus, limit, offset int) ([]*model.Payment, int64, error)
 	GetPaymentDetail(requestorRole model.UserRole, paymentID uint) (*model.Payment, error)
 
 	// Webhook/System methods
@@ -90,32 +90,37 @@ func (s *paymentService) CreatePayment(userID uint, bookingID uint, provider mod
 		return nil, err
 	}
 
-	// Create charge with payment gateway
+	// Create charge with payment gateway based on provider
 	orderID := fmt.Sprintf("booking-%d", bookingID)
-	// Set default payment type if not provided
-	if paymentType == "" {
-		if provider == model.ProviderMidtrans {
+	
+	switch provider {
+	case model.ProviderMidtrans:
+		// Set default payment type if not provided
+		if paymentType == "" {
 			paymentType = "bank_transfer"
-		} else {
-			paymentType = "credit_card"
 		}
-	}
 
-	txID, _, err := s.transactionRepo.CreateCharge(
-		context.Background(),
-		orderID,
-		int64(payment.Amount), // Rupiah penuh sesuai API Midtrans
-		paymentType,
-		nil,
-	)
-	if err != nil {
-		// Payment gateway failed, but payment record exists
-		return payment, fmt.Errorf("payment gateway error: %w", err)
+		txID, _, err := s.transactionRepo.CreateCharge(
+			context.Background(),
+			orderID,
+			int64(payment.Amount),
+			paymentType,
+			nil,
+		)
+		if err != nil {
+			return payment, fmt.Errorf("midtrans payment gateway error: %w", err)
+		}
+		
+		// Update payment with provider transaction ID
+		payment.ProviderPaymentID = &txID
+		s.paymentRepo.Update(payment)
+		
+	case model.ProviderStripe:
+		return payment, errors.New("stripe payment provider not implemented yet")
+		
+	default:
+		return payment, errors.New("unsupported payment provider")
 	}
-
-	// Update payment with provider transaction ID
-	payment.ProviderPaymentID = &txID
-	s.paymentRepo.Update(payment)
 
 	return payment, nil
 }
@@ -134,20 +139,32 @@ func (s *paymentService) GetPaymentByBooking(userID uint, bookingID uint) (*mode
 	return s.paymentRepo.GetByBookingID(bookingID)
 }
 
-func (s *paymentService) GetAllPayments(requestorRole model.UserRole, limit, offset int) ([]*model.Payment, error) {
+func (s *paymentService) GetAllPayments(requestorRole model.UserRole, limit, offset int) ([]*model.Payment, int64, error) {
 	if !s.canManagePayments(requestorRole) {
-		return nil, ErrInsufficientPermission
+		return nil, 0, ErrInsufficientPermission
 	}
 
-	return s.paymentRepo.GetPaymentsByStatus(model.PaymentStatus(""), limit, offset) // Get all
+	payments, err := s.paymentRepo.GetAllPayments(limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	count, err := s.paymentRepo.CountAllPayments()
+	return payments, count, err
 }
 
-func (s *paymentService) GetPaymentsByStatus(requestorRole model.UserRole, status model.PaymentStatus, limit, offset int) ([]*model.Payment, error) {
+func (s *paymentService) GetPaymentsByStatus(requestorRole model.UserRole, status model.PaymentStatus, limit, offset int) ([]*model.Payment, int64, error) {
 	if !s.canManagePayments(requestorRole) {
-		return nil, ErrInsufficientPermission
+		return nil, 0, ErrInsufficientPermission
 	}
 
-	return s.paymentRepo.GetPaymentsByStatus(status, limit, offset)
+	payments, err := s.paymentRepo.GetPaymentsByStatus(status, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	count, err := s.paymentRepo.CountByStatus(status)
+	return payments, count, err
 }
 
 func (s *paymentService) GetPaymentDetail(requestorRole model.UserRole, paymentID uint) (*model.Payment, error) {

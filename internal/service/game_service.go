@@ -24,6 +24,7 @@ type GameService interface {
 	CreatePartnerGame(partnerID uint, gameData *model.Game) error
 	UpdatePartnerGame(partnerID uint, gameID uint, updateData *model.Game) error
 	GetPartnerGames(partnerID uint, limit, offset int) ([]*model.Game, error)
+	GetPartnerGameByID(partnerID uint, gameID uint) (*model.Game, error)
 
 	// Admin methods
 	ApproveGame(adminID uint, requestorRole model.UserRole, gameID uint) error
@@ -123,6 +124,19 @@ func (s *gameService) UpdatePartnerGame(partnerID uint, gameID uint, updateData 
 
 func (s *gameService) GetPartnerGames(partnerID uint, limit, offset int) ([]*model.Game, error) {
 	return s.gameRepo.GetGamesByPartner(partnerID, limit, offset)
+}
+
+func (s *gameService) GetPartnerGameByID(partnerID uint, gameID uint) (*model.Game, error) {
+	game, err := s.gameRepo.GetByID(gameID)
+	if err != nil {
+		return nil, ErrGameNotFound
+	}
+
+	if game.PartnerID != partnerID {
+		return nil, ErrGameNotOwned
+	}
+
+	return game, nil
 }
 
 // Admin methods

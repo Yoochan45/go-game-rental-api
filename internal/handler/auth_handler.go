@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"fmt"
-
 	myResponse "github.com/Yoochan45/go-api-utils/pkg-echo/response"
 	"github.com/Yoochan45/go-game-rental-api/internal/dto"
 	"github.com/Yoochan45/go-game-rental-api/internal/repository/email"
@@ -54,24 +52,9 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return myResponse.BadRequest(c, err.Error())
 	}
 
-	// Send email verification
-	go func() {
-		// Get verification token (we need to create a method to get it)
-		verificationURL := fmt.Sprintf("http://localhost:8080/auth/verify?token=PLACEHOLDER")
-		subject := "Verify Your Email - Game Rental"
-		htmlContent := fmt.Sprintf(`
-			<h1>Welcome %s!</h1>
-			<p>Thank you for registering at Game Rental Platform.</p>
-			<p>Please click the link below to verify your email:</p>
-			<a href="%s">Verify Email</a>
-			<p>This link will expire in 24 hours.</p>
-		`, user.FullName, verificationURL)
-		plainText := "Welcome " + user.FullName + "! Please verify your email by visiting: " + verificationURL
-
-		if err := h.emailRepo.SendEmail(c.Request().Context(), user.Email, subject, plainText, htmlContent); err != nil {
-			logrus.WithError(err).Error("Failed to send verification email")
-		}
-	}()
+	// TODO: Send email verification with actual token
+	// For now, user is auto-verified for development
+	logrus.Info("User registered successfully - email verification disabled for development")
 
 	return myResponse.Created(c, "User registered successfully. Please check your email to verify your account.", map[string]interface{}{
 		"user_id": user.ID,

@@ -16,6 +16,9 @@ type PaymentRepository interface {
 	GetByBookingID(bookingID uint) (*model.Payment, error)
 	GetByProviderPaymentID(providerPaymentID string) (*model.Payment, error)
 	GetPaymentsByStatus(status model.PaymentStatus, limit, offset int) ([]*model.Payment, error)
+	GetAllPayments(limit, offset int) ([]*model.Payment, error)
+	CountAllPayments() (int64, error)
+	CountByStatus(status model.PaymentStatus) (int64, error)
 
 	// Status updates
 	MarkAsPaid(paymentID uint, providerPaymentID string, paymentMethod string) error
@@ -97,4 +100,23 @@ func (r *paymentRepository) MarkAsFailed(paymentID uint, failureReason string) e
 		"failure_reason": failureReason,
 		"failed_at":      gorm.Expr("CURRENT_TIMESTAMP"),
 	}).Error
+}
+
+func (r *paymentRepository) GetAllPayments(limit, offset int) ([]*model.Payment, error) {
+	var payments []*model.Payment
+	err := r.db.Preload("Booking").Order("created_at DESC").
+		Limit(limit).Offset(offset).Find(&payments).Error
+	return payments, err
+}
+
+func (r *paymentRepository) CountAllPayments() (int64, error) {
+	var count int64
+	err := r.db.Model(&model.Payment{}).Count(&count).Error
+	return count, err
+}
+
+func (r *paymentRepository) CountByStatus(status model.PaymentStatus) (int64, error) {
+	var count int64
+	err := r.db.Model(&model.Payment{}).Where("status = ?", status).Count(&count).Error
+	return count, err
 }
