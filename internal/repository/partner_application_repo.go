@@ -16,13 +16,9 @@ type PartnerApplicationRepository interface {
 	GetByUserID(userID uint) (*model.PartnerApplication, error)
 	GetPendingApplications(limit, offset int) ([]*model.PartnerApplication, error)
 	GetAllApplications(limit, offset int) ([]*model.PartnerApplication, error)
-	GetApplicationsByStatus(status model.ApplicationStatus, limit, offset int) ([]*model.PartnerApplication, error)
 
 	// Admin methods
 	UpdateApplicationStatus(applicationID uint, status model.ApplicationStatus, decidedBy uint, rejectionReason *string) error
-
-	// Statistics
-	CountByStatus(status model.ApplicationStatus) (int64, error)
 }
 
 type partnerApplicationRepository struct {
@@ -82,13 +78,6 @@ func (r *partnerApplicationRepository) GetAllApplications(limit, offset int) ([]
 	return applications, err
 }
 
-func (r *partnerApplicationRepository) GetApplicationsByStatus(status model.ApplicationStatus, limit, offset int) ([]*model.PartnerApplication, error) {
-	var applications []*model.PartnerApplication
-	err := r.db.Preload("User").Preload("Decider").Where("status = ?", status).
-		Limit(limit).Offset(offset).Find(&applications).Error
-	return applications, err
-}
-
 func (r *partnerApplicationRepository) UpdateApplicationStatus(applicationID uint, status model.ApplicationStatus, decidedBy uint, rejectionReason *string) error {
 	updates := map[string]interface{}{
 		"status":     status,
@@ -101,10 +90,4 @@ func (r *partnerApplicationRepository) UpdateApplicationStatus(applicationID uin
 	}
 
 	return r.db.Model(&model.PartnerApplication{}).Where("id = ?", applicationID).Updates(updates).Error
-}
-
-func (r *partnerApplicationRepository) CountByStatus(status model.ApplicationStatus) (int64, error) {
-	var count int64
-	err := r.db.Model(&model.PartnerApplication{}).Where("status = ?", status).Count(&count).Error
-	return count, err
 }

@@ -13,12 +13,9 @@ type UserRepository interface {
 	Delete(id uint) error
 
 	GetAll(limit, offset int) ([]*model.User, error)
-	GetByRole(role model.UserRole, limit, offset int) ([]*model.User, error)
 	UpdateRole(userID uint, newRole model.UserRole) error
 	UpdateActiveStatus(userID uint, isActive bool) error
-	GetActiveUsers(limit, offset int) ([]*model.User, error)
 	Count() (int64, error)
-	CountByRole(role model.UserRole) (int64, error)
 }
 
 type userRepository struct {
@@ -66,12 +63,6 @@ func (r *userRepository) GetAll(limit, offset int) ([]*model.User, error) {
 	return users, err
 }
 
-func (r *userRepository) GetByRole(role model.UserRole, limit, offset int) ([]*model.User, error) {
-	var users []*model.User
-	err := r.db.Where("role = ?", role).Limit(limit).Offset(offset).Find(&users).Error
-	return users, err
-}
-
 func (r *userRepository) UpdateRole(userID uint, newRole model.UserRole) error {
 	return r.db.Model(&model.User{}).Where("id = ?", userID).Update("role", newRole).Error
 }
@@ -80,20 +71,8 @@ func (r *userRepository) UpdateActiveStatus(userID uint, isActive bool) error {
 	return r.db.Model(&model.User{}).Where("id = ?", userID).Update("is_active", isActive).Error
 }
 
-func (r *userRepository) GetActiveUsers(limit, offset int) ([]*model.User, error) {
-	var users []*model.User
-	err := r.db.Where("is_active = ?", true).Limit(limit).Offset(offset).Find(&users).Error
-	return users, err
-}
-
 func (r *userRepository) Count() (int64, error) {
 	var count int64
 	err := r.db.Model(&model.User{}).Count(&count).Error
-	return count, err
-}
-
-func (r *userRepository) CountByRole(role model.UserRole) (int64, error) {
-	var count int64
-	err := r.db.Model(&model.User{}).Where("role = ?", role).Count(&count).Error
 	return count, err
 }

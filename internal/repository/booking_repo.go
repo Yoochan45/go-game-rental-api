@@ -19,7 +19,6 @@ type BookingRepository interface {
 	GetUserBookings(userID uint, limit, offset int) ([]*model.Booking, error)
 	GetPartnerBookings(partnerID uint, limit, offset int) ([]*model.Booking, error)
 	GetBookingsByStatus(status model.BookingStatus, limit, offset int) ([]*model.Booking, error)
-	GetBookingsByGame(gameID uint, limit, offset int) ([]*model.Booking, error)
 
 	// Status updates
 	UpdateStatus(bookingID uint, status model.BookingStatus) error
@@ -28,11 +27,6 @@ type BookingRepository interface {
 
 	// Date conflicts check
 	CheckDateConflicts(gameID uint, startDate, endDate time.Time, excludeBookingID *uint) (bool, error)
-
-	// Statistics
-	CountByStatus(status model.BookingStatus) (int64, error)
-	CountUserBookings(userID uint) (int64, error)
-	CountPartnerBookings(partnerID uint) (int64, error)
 }
 
 type bookingRepository struct {
@@ -98,13 +92,6 @@ func (r *bookingRepository) GetBookingsByStatus(status model.BookingStatus, limi
 	return bookings, err
 }
 
-func (r *bookingRepository) GetBookingsByGame(gameID uint, limit, offset int) ([]*model.Booking, error) {
-	var bookings []*model.Booking
-	err := r.db.Preload("User").Where("game_id = ?", gameID).
-		Order("created_at DESC").Limit(limit).Offset(offset).Find(&bookings).Error
-	return bookings, err
-}
-
 func (r *bookingRepository) UpdateStatus(bookingID uint, status model.BookingStatus) error {
 	return r.db.Model(&model.Booking{}).Where("id = ?", bookingID).Update("status", status).Error
 }
@@ -142,20 +129,4 @@ func (r *bookingRepository) CheckDateConflicts(gameID uint, startDate, endDate t
 	return count > 0, err
 }
 
-func (r *bookingRepository) CountByStatus(status model.BookingStatus) (int64, error) {
-	var count int64
-	err := r.db.Model(&model.Booking{}).Where("status = ?", status).Count(&count).Error
-	return count, err
-}
 
-func (r *bookingRepository) CountUserBookings(userID uint) (int64, error) {
-	var count int64
-	err := r.db.Model(&model.Booking{}).Where("user_id = ?", userID).Count(&count).Error
-	return count, err
-}
-
-func (r *bookingRepository) CountPartnerBookings(partnerID uint) (int64, error) {
-	var count int64
-	err := r.db.Model(&model.Booking{}).Where("partner_id = ?", partnerID).Count(&count).Error
-	return count, err
-}

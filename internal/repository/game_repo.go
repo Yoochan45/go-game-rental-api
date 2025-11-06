@@ -15,29 +15,19 @@ type GameRepository interface {
 
 	// Query methods for public catalog
 	GetApprovedGames(limit, offset int) ([]*model.Game, error)
-	GetGamesByCategory(categoryID uint, limit, offset int) ([]*model.Game, error)
 	SearchGames(query string, limit, offset int) ([]*model.Game, error)
-	GetAvailableGames(limit, offset int) ([]*model.Game, error)
 
 	// Partner methods
 	GetGamesByPartner(partnerID uint, limit, offset int) ([]*model.Game, error)
 
 	// Admin methods
-	GetPendingApprovalGames(limit, offset int) ([]*model.Game, error)
 	GetAllGames(limit, offset int) ([]*model.Game, error)
 	UpdateApprovalStatus(gameID uint, status model.ApprovalStatus, approvedBy *uint, rejectionReason *string) error
 
 	// Stock management
-	UpdateStock(gameID uint, newStock int) error
-	UpdateAvailableStock(gameID uint, newAvailableStock int) error
 	CheckAvailability(gameID uint, quantity int) (bool, error)
 	ReserveStock(gameID uint, quantity int) error
 	ReleaseStock(gameID uint, quantity int) error
-
-	// Statistics
-	CountByPartner(partnerID uint) (int64, error)
-	CountByCategory(categoryID uint) (int64, error)
-	CountByStatus(status model.ApprovalStatus) (int64, error)
 }
 
 type gameRepository struct {
@@ -88,30 +78,12 @@ func (r *gameRepository) GetApprovedGames(limit, offset int) ([]*model.Game, err
 	return games, err
 }
 
-func (r *gameRepository) GetGamesByCategory(categoryID uint, limit, offset int) ([]*model.Game, error) {
-	var games []*model.Game
-	err := r.db.Preload("Partner").Preload("Category").
-		Where("category_id = ? AND approval_status = ? AND is_active = ?",
-			categoryID, model.ApprovalApproved, true).
-		Limit(limit).Offset(offset).Find(&games).Error
-	return games, err
-}
-
 func (r *gameRepository) SearchGames(query string, limit, offset int) ([]*model.Game, error) {
 	var games []*model.Game
 	searchQuery := "%" + query + "%"
 	err := r.db.Preload("Partner").Preload("Category").
 		Where("(name ILIKE ? OR description ILIKE ? OR platform ILIKE ?) AND approval_status = ? AND is_active = ?",
 			searchQuery, searchQuery, searchQuery, model.ApprovalApproved, true).
-		Limit(limit).Offset(offset).Find(&games).Error
-	return games, err
-}
-
-func (r *gameRepository) GetAvailableGames(limit, offset int) ([]*model.Game, error) {
-	var games []*model.Game
-	err := r.db.Preload("Partner").Preload("Category").
-		Where("available_stock > 0 AND approval_status = ? AND is_active = ?",
-			model.ApprovalApproved, true).
 		Limit(limit).Offset(offset).Find(&games).Error
 	return games, err
 }
@@ -126,14 +98,6 @@ func (r *gameRepository) GetGamesByPartner(partnerID uint, limit, offset int) ([
 }
 
 // Admin methods
-func (r *gameRepository) GetPendingApprovalGames(limit, offset int) ([]*model.Game, error) {
-	var games []*model.Game
-	err := r.db.Preload("Partner").Preload("Category").
-		Where("approval_status = ?", model.ApprovalPending).
-		Limit(limit).Offset(offset).Find(&games).Error
-	return games, err
-}
-
 func (r *gameRepository) GetAllGames(limit, offset int) ([]*model.Game, error) {
 	var games []*model.Game
 	err := r.db.Preload("Partner").Preload("Category").Preload("Approver").
@@ -161,19 +125,6 @@ func (r *gameRepository) UpdateApprovalStatus(gameID uint, status model.Approval
 }
 
 // Stock management
-func (r *gameRepository) UpdateStock(gameID uint, newStock int) error {
-	return r.db.Model(&model.Game{}).Where("id = ?", gameID).
-		Updates(map[string]interface{}{
-			"stock":           newStock,
-			"available_stock": gorm.Expr("LEAST(available_stock, ?)", newStock),
-		}).Error
-}
-
-func (r *gameRepository) UpdateAvailableStock(gameID uint, newAvailableStock int) error {
-	return r.db.Model(&model.Game{}).Where("id = ?", gameID).
-		Update("available_stock", newAvailableStock).Error
-}
-
 func (r *gameRepository) CheckAvailability(gameID uint, quantity int) (bool, error) {
 	var game model.Game
 	err := r.db.Select("available_stock").Where("id = ?", gameID).First(&game).Error
@@ -191,23 +142,4 @@ func (r *gameRepository) ReserveStock(gameID uint, quantity int) error {
 func (r *gameRepository) ReleaseStock(gameID uint, quantity int) error {
 	return r.db.Model(&model.Game{}).Where("id = ?", gameID).
 		Update("available_stock", gorm.Expr("LEAST(available_stock + ?, stock)", quantity)).Error
-}
-
-// Statistics
-func (r *gameRepository) CountByPartner(partnerID uint) (int64, error) {
-	var count int64
-	err := r.db.Model(&model.Game{}).Where("partner_id = ?", partnerID).Count(&count).Error
-	return count, err
-}
-
-func (r *gameRepository) CountByCategory(categoryID uint) (int64, error) {
-	var count int64
-	err := r.db.Model(&model.Game{}).Where("category_id = ?", categoryID).Count(&count).Error
-	return count, err
-}
-
-func (r *gameRepository) CountByStatus(status model.ApprovalStatus) (int64, error) {
-	var count int64
-	err := r.db.Model(&model.Game{}).Where("approval_status = ?", status).Count(&count).Error
-	return count, err
 }
