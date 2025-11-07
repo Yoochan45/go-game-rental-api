@@ -39,14 +39,7 @@ func NewPaymentHandler(paymentService service.PaymentService) *PaymentHandler {
 // @Router /bookings/{booking_id}/payments [post]
 func (h *PaymentHandler) CreatePayment(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
-	if userID == 0 {
-		return myResponse.Unauthorized(c, "Unauthorized")
-	}
-
 	bookingID := myRequest.PathParamUint(c, "booking_id")
-	if bookingID == 0 {
-		return myResponse.BadRequest(c, "Invalid booking ID")
-	}
 
 	var req dto.CreatePaymentRequest
 	if err := c.Bind(&req); err != nil {
@@ -58,7 +51,7 @@ func (h *PaymentHandler) CreatePayment(c echo.Context) error {
 
 	payment, err := h.paymentService.CreatePayment(userID, bookingID, req.Provider, req.PaymentType)
 	if err != nil {
-		return myResponse.Forbidden(c, err.Error())
+		return myResponse.Forbidden(c, err.Error()) // Return 403 jika service error
 	}
 
 	return myResponse.Created(c, "Payment created successfully", payment)
