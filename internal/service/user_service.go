@@ -159,6 +159,41 @@ func (s *userService) UpdateUserRole(requestorRole model.UserRole, userID uint, 
 	if !s.canManageUsers(requestorRole) {
 		return ErrInsufficientPermission
 	}
+
+	// Get target user
+	targetUser, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	// FIX 1: Validate target role
+	validRoles := []model.UserRole{model.RoleCustomer, model.RoleAdmin, model.RoleSuperAdmin}
+	isValidRole := false
+	for _, validRole := range validRoles {
+		if newRole == validRole {
+			isValidRole = true
+			break
+		}
+	}
+	if !isValidRole {
+		return errors.New("invalid role")
+	}
+
+	// FIX 2: Admin cannot modify super_admin
+	if requestorRole == model.RoleAdmin && targetUser.Role == model.RoleSuperAdmin {
+		return errors.New("admin cannot modify super admin role")
+	}
+
+	// FIX 3: Admin cannot promote to super_admin
+	if requestorRole == model.RoleAdmin && newRole == model.RoleSuperAdmin {
+		return errors.New("admin cannot promote user to super admin")
+	}
+
+	// FIX 4: Only super_admin can create/modify super_admin
+	if newRole == model.RoleSuperAdmin && requestorRole != model.RoleSuperAdmin {
+		return errors.New("only super admin can assign super admin role")
+	}
+
 	return s.userRepo.UpdateRole(userID, newRole)
 }
 
@@ -167,12 +202,22 @@ func (s *userService) ToggleUserStatus(requestorRole model.UserRole, userID uint
 		return ErrInsufficientPermission
 	}
 
-	user, err := s.userRepo.GetByID(userID)
+	targetUser, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return ErrUserNotFound
 	}
 
-	return s.userRepo.UpdateActiveStatus(userID, !user.IsActive)
+	// FIX 1: Admin cannot disable super_admin
+	if requestorRole == model.RoleAdmin && targetUser.Role == model.RoleSuperAdmin {
+		return errors.New("admin cannot modify super admin status")
+	}
+
+	// FIX 2: Super admin cannot be disabled (extra protection)
+	if targetUser.Role == model.RoleSuperAdmin && requestorRole != model.RoleSuperAdmin {
+		return ErrCannotDeleteSuperAdmin
+	}
+
+	return s.userRepo.UpdateActiveStatus(userID, !targetUser.IsActive)
 }
 
 func (s *userService) DeleteUser(requestorID uint, requestorRole model.UserRole, targetUserID uint) error {
