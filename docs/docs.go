@@ -1919,8 +1919,10 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "category_id",
+                "condition",
                 "name",
                 "rental_price_per_day",
+                "security_deposit",
                 "stock"
             ],
             "properties": {
@@ -1938,21 +1940,16 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
-                "images": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "name": {
                     "type": "string",
-                    "minLength": 2
+                    "minLength": 3
                 },
                 "platform": {
                     "type": "string"
                 },
                 "rental_price_per_day": {
-                    "type": "number"
+                    "type": "number",
+                    "minimum": 0
                 },
                 "security_deposit": {
                     "type": "number",
@@ -1960,7 +1957,7 @@ const docTemplate = `{
                 },
                 "stock": {
                     "type": "integer",
-                    "minimum": 1
+                    "minimum": 0
                 }
             }
         },
@@ -2100,7 +2097,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "category_id": {
-                    "description": "HAPUS validate:\"required\"",
                     "type": "integer"
                 },
                 "condition": {
@@ -2302,12 +2298,6 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
-                },
-                "images": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
                 },
                 "is_active": {
                     "type": "boolean"

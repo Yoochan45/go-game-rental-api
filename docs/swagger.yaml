@@ -40,27 +40,26 @@ definitions:
         type: string
       description:
         type: string
-      images:
-        items:
-          type: string
-        type: array
       name:
-        minLength: 2
+        minLength: 3
         type: string
       platform:
         type: string
       rental_price_per_day:
+        minimum: 0
         type: number
       security_deposit:
         minimum: 0
         type: number
       stock:
-        minimum: 1
+        minimum: 0
         type: integer
     required:
     - category_id
+    - condition
     - name
     - rental_price_per_day
+    - security_deposit
     - stock
     type: object
   dto.CreatePaymentRequest:
@@ -154,7 +153,6 @@ definitions:
   dto.UpdateGameRequest:
     properties:
       category_id:
-        description: HAPUS validate:"required"
         type: integer
       condition:
         type: string
@@ -289,10 +287,6 @@ definitions:
         type: string
       id:
         type: integer
-      images:
-        items:
-          type: string
-        type: array
       is_active:
         type: boolean
       name:

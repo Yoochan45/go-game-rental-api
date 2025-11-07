@@ -4,7 +4,7 @@ CREATE TYPE booking_status AS ENUM ('pending', 'confirmed', 'active', 'completed
 CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed', 'refunded');
 CREATE TYPE payment_provider AS ENUM ('midtrans');
 
--- Users table (no email verification, no partner)
+-- Users table
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Categories table (unchanged)
+-- Categories table 
 CREATE TABLE categories (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
@@ -27,7 +27,7 @@ CREATE TABLE categories (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Games table (simplified - no approval, admin owns directly)
+-- Games table 
 CREATE TABLE games (
     id BIGSERIAL PRIMARY KEY,
     admin_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -40,13 +40,12 @@ CREATE TABLE games (
     rental_price_per_day DECIMAL(10,2) NOT NULL,
     security_deposit DECIMAL(10,2) DEFAULT 0.00,
     condition VARCHAR(50) DEFAULT 'excellent',
-    images TEXT[],
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Bookings table (simplified status)
+-- Bookings table 
 CREATE TABLE bookings (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -64,7 +63,7 @@ CREATE TABLE bookings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Payments table (keep Midtrans)
+-- Payments table 
 CREATE TABLE payments (
     id BIGSERIAL PRIMARY KEY,
     booking_id BIGINT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
@@ -77,7 +76,7 @@ CREATE TABLE payments (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Reviews table (unchanged)
+-- Reviews table 
 CREATE TABLE reviews (
     id BIGSERIAL PRIMARY KEY,
     booking_id BIGINT UNIQUE NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
@@ -115,13 +114,4 @@ CREATE TRIGGER update_games_updated_at BEFORE UPDATE ON games FOR EACH ROW EXECU
 CREATE TRIGGER update_bookings_updated_at BEFORE UPDATE ON bookings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_reviews_updated_at BEFORE UPDATE ON reviews FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Default categories
-INSERT INTO categories (name, description) VALUES 
-('Action', 'Action and adventure games'),
-('RPG', 'Role-playing games'),
-('Strategy', 'Strategy and simulation games'),
-('Sports', 'Sports games'),
-('Racing', 'Racing games'),
-('Fighting', 'Fighting games'),
-('Puzzle', 'Puzzle and brain games'),
-('Horror', 'Horror and thriller games');
+

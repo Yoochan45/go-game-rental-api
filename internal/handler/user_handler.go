@@ -1,7 +1,7 @@
 package handler
 
 import (
-	echomw "github.com/Yoochan45/go-api-utils/pkg-echo/middleware"
+	echomw "github.com/Yoochan45/go-api-utils/pkg-echo/middleware" // BALIK KE INI
 	myRequest "github.com/Yoochan45/go-api-utils/pkg-echo/request"
 	myResponse "github.com/Yoochan45/go-api-utils/pkg-echo/response"
 	"github.com/Yoochan45/go-game-rental-api/internal/dto"
@@ -10,6 +10,7 @@ import (
 	"github.com/Yoochan45/go-game-rental-api/internal/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
+	"github.com/sirupsen/logrus"
 )
 
 type UserHandler struct {
@@ -35,10 +36,7 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Router /users/me [get]
 func (h *UserHandler) GetMyProfile(c echo.Context) error {
-	userID := echomw.CurrentUserID(c)
-	if userID == 0 {
-		return myResponse.Unauthorized(c, "Unauthorized")
-	}
+	userID := echomw.CurrentUserID(c) // BALIK PAKAI INI
 
 	user, err := h.userService.GetProfile(userID)
 	if err != nil {
@@ -61,10 +59,7 @@ func (h *UserHandler) GetMyProfile(c echo.Context) error {
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Router /users/me [put]
 func (h *UserHandler) UpdateMyProfile(c echo.Context) error {
-	userID := echomw.CurrentUserID(c)
-	if userID == 0 {
-		return myResponse.Unauthorized(c, "Unauthorized")
-	}
+	userID := echomw.CurrentUserID(c) // BALIK PAKAI INI
 
 	var req dto.UpdateProfileRequest
 	if err := c.Bind(&req); err != nil {
@@ -103,7 +98,7 @@ func (h *UserHandler) UpdateMyProfile(c echo.Context) error {
 // @Router /admin/users [get]
 func (h *UserHandler) GetAllUsers(c echo.Context) error {
 	params := utils.ParsePagination(c)
-	role := echomw.CurrentRole(c)
+	role := echomw.CurrentRole(c) // BALIK PAKAI INI
 
 	users, totalCount, err := h.userService.GetAllUsers(model.UserRole(role), params.Limit, params.Offset)
 	if err != nil {
@@ -134,7 +129,7 @@ func (h *UserHandler) GetUserDetail(c echo.Context) error {
 		return myResponse.BadRequest(c, "Invalid user ID")
 	}
 
-	role := echomw.CurrentRole(c)
+	role := echomw.CurrentRole(c) // BALIK PAKAI INI
 	user, err := h.userService.GetUserDetail(model.UserRole(role), userID)
 	if err != nil {
 		return myResponse.Forbidden(c, err.Error())
@@ -171,9 +166,7 @@ func (h *UserHandler) UpdateUserRole(c echo.Context) error {
 		return myResponse.BadRequest(c, "Validation error: "+err.Error())
 	}
 
-	role := echomw.CurrentRole(c)
-
-	// UpdateUserRole only returns error, not (user, error)
+	role := echomw.CurrentRole(c) // BALIK PAKAI INI
 	err := h.userService.UpdateUserRole(model.UserRole(role), userID, req.Role)
 	if err != nil {
 		return myResponse.Forbidden(c, err.Error())
@@ -207,9 +200,7 @@ func (h *UserHandler) ToggleUserStatus(c echo.Context) error {
 		return myResponse.BadRequest(c, "Invalid user ID")
 	}
 
-	role := echomw.CurrentRole(c)
-
-	// ToggleUserStatus only returns error, not (user, error)
+	role := echomw.CurrentRole(c) // BALIK PAKAI INI
 	err := h.userService.ToggleUserStatus(model.UserRole(role), userID)
 	if err != nil {
 		return myResponse.Forbidden(c, err.Error())
@@ -243,15 +234,22 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 		return myResponse.BadRequest(c, "Invalid user ID")
 	}
 
-	// Get current user info for delete operation
-	currentUserID := echomw.CurrentUserID(c)
+	// FIX: Pakai CurrentUserID() untuk dapat ID requester
+	currentUserID := echomw.CurrentUserID(c) // TAMBAH INI
 	role := echomw.CurrentRole(c)
 
-	// Fix argument order: (requestorID, requestorRole, targetUserID)
+	logrus.Info("=== DELETE USER ===")
+	logrus.Info("Requester ID:", currentUserID)
+	logrus.Info("Requester Role:", role)
+	logrus.Info("Target User ID:", userID)
+
+	// FIX: Pass currentUserID sebagai parameter pertama
 	err := h.userService.DeleteUser(currentUserID, model.UserRole(role), userID)
 	if err != nil {
+		logrus.Error("Delete failed:", err)
 		return myResponse.Forbidden(c, err.Error())
 	}
 
+	logrus.Info("User deleted successfully")
 	return myResponse.Success(c, "User deleted successfully", nil)
 }

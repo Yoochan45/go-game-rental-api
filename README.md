@@ -67,7 +67,6 @@ This project implements multi-role system (Super Admin, Admin, Customer), along 
 - ⏳ Email notification triggers (welcome, booking confirmation, etc.)
 - ⏳ Advanced filtering (by category, platform, price range)
 - ⏳ Admin analytics dashboard
-- ⏳ File upload for game images (Supabase Storage)
 - ⏳ Payment gateway full integration (Midtrans/Stripe)
 
 ---
@@ -307,7 +306,6 @@ sqlDB.SetConnMaxLifetime(500 * time.Millisecond)
 - **Payment**: Midtrans structure (webhook handler ready)
 
 ### 🚧 Planned
-- **File Storage**: Supabase Storage for game images
 - **Error Tracking**: Sentry
 - **Deployment**: Railway / Heroku
 - **Monitoring**: Prometheus + Grafana

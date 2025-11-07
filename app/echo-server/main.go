@@ -141,8 +141,8 @@ func main() {
 	userService := service.NewUserService(userRepo)
 	categoryService := service.NewCategoryService(categoryRepo)
 	gameService := service.NewGameService(gameRepo)
-	bookingService := service.NewBookingService(bookingRepo, gameRepo)
-	paymentService := service.NewPaymentService(paymentRepo, bookingRepo, userRepo, bookingService, transactionRepo)
+	bookingService := service.NewBookingService(bookingRepo, gameRepo, userRepo, emailRepo)
+	paymentService := service.NewPaymentService(paymentRepo, bookingRepo, userRepo, gameRepo, bookingService, transactionRepo, emailRepo)
 	reviewService := service.NewReviewService(reviewRepo, bookingRepo)
 
 	// Initialize handlers

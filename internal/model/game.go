@@ -1,9 +1,6 @@
 package model
 
 import (
-	"database/sql/driver"
-	"encoding/json"
-	"errors"
 	"time"
 )
 
@@ -14,28 +11,6 @@ const (
 	ConditionGood      GameCondition = "good"
 	ConditionFair      GameCondition = "fair"
 )
-
-// StringArray for Swagger compatibility
-type StringArray []string
-
-func (a StringArray) Value() (driver.Value, error) {
-	if len(a) == 0 {
-		return nil, nil
-	}
-	return json.Marshal(a)
-}
-
-func (a *StringArray) Scan(value interface{}) error {
-	if value == nil {
-		*a = []string{}
-		return nil
-	}
-	bytes, ok := value.([]byte)
-	if !ok {
-		return errors.New("failed to unmarshal StringArray")
-	}
-	return json.Unmarshal(bytes, a)
-}
 
 type Game struct {
 	ID                uint          `gorm:"primaryKey" json:"id"`
@@ -51,10 +26,10 @@ type Game struct {
 	RentalPricePerDay float64       `gorm:"type:decimal(10,2);not null" json:"rental_price_per_day"`
 	SecurityDeposit   float64       `gorm:"type:decimal(10,2);not null" json:"security_deposit"`
 	Condition         GameCondition `gorm:"type:varchar(20);not null" json:"condition"`
-	Images            StringArray   `gorm:"type:text[]" json:"images" swaggertype:"array,string"`
-	IsActive          bool          `gorm:"default:true" json:"is_active"`
-	CreatedAt         time.Time     `json:"created_at"`
-	UpdatedAt         time.Time     `json:"updated_at"`
+
+	IsActive  bool      `gorm:"default:true" json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (Game) TableName() string {

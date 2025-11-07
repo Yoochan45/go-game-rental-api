@@ -8,7 +8,9 @@ import (
 
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
 	"github.com/Yoochan45/go-game-rental-api/internal/repository"
+	"github.com/Yoochan45/go-game-rental-api/internal/repository/email"
 	"github.com/Yoochan45/go-game-rental-api/internal/repository/transaction"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -37,23 +39,29 @@ type paymentService struct {
 	paymentRepo     repository.PaymentRepository
 	bookingRepo     repository.BookingRepository
 	userRepo        repository.UserRepository
+	gameRepo        repository.GameRepository
 	bookingService  BookingService
 	transactionRepo transaction.TransactionRepository
+	emailRepo       email.EmailRepository
 }
 
 func NewPaymentService(
 	paymentRepo repository.PaymentRepository,
 	bookingRepo repository.BookingRepository,
 	userRepo repository.UserRepository,
+	gameRepo repository.GameRepository,
 	bookingService BookingService,
 	transactionRepo transaction.TransactionRepository,
+	emailRepo email.EmailRepository,
 ) PaymentService {
 	return &paymentService{
 		paymentRepo:     paymentRepo,
 		bookingRepo:     bookingRepo,
 		userRepo:        userRepo,
+		gameRepo:        gameRepo,
 		bookingService:  bookingService,
 		transactionRepo: transactionRepo,
+		emailRepo:       emailRepo,
 	}
 }
 
@@ -121,6 +129,37 @@ func (s *paymentService) CreatePayment(userID uint, bookingID uint, provider mod
 
 	default:
 		return payment, errors.New("unsupported payment provider")
+	}
+
+	// SEND EMAIL: Payment instruction
+	user, _ := s.userRepo.GetByID(userID)
+	game, _ := s.gameRepo.GetByID(booking.GameID)
+	if user != nil && game != nil {
+		go func() {
+			subject := "Payment Instruction - Game Rental"
+			orderIDStr := "N/A"
+			if payment.ProviderPaymentID != nil {
+				orderIDStr = *payment.ProviderPaymentID
+			}
+			htmlContent := fmt.Sprintf(`
+				<h1>Complete Your Payment</h1>
+				<p>Hi %s,</p>
+				<p>Please complete payment to confirm your booking.</p>
+				<h3>Payment Details:</h3>
+				<ul>
+					<li><strong>Order ID:</strong> %s</li>
+					<li><strong>Amount:</strong> Rp %.0f</li>
+					<li><strong>Game:</strong> %s</li>
+				</ul>
+				<p>Complete within 24 hours.</p>
+			`, user.FullName, orderIDStr, payment.Amount, game.Name)
+
+			plainText := fmt.Sprintf("Payment instruction. Order ID: %s, Amount: Rp %.0f", orderIDStr, payment.Amount)
+
+			if err := s.emailRepo.SendEmail(context.Background(), user.Email, subject, plainText, htmlContent); err != nil {
+				logrus.WithError(err).Error("Failed to send payment instruction email")
+			}
+		}()
 	}
 
 	return payment, nil

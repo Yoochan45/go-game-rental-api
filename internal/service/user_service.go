@@ -176,10 +176,12 @@ func (s *userService) ToggleUserStatus(requestorRole model.UserRole, userID uint
 }
 
 func (s *userService) DeleteUser(requestorID uint, requestorRole model.UserRole, targetUserID uint) error {
-	if requestorRole != model.RoleSuperAdmin {
+	// FIX: Allow both admin and super_admin
+	if requestorRole != model.RoleAdmin && requestorRole != model.RoleSuperAdmin {
 		return ErrInsufficientPermission
 	}
 
+	// Prevent self-delete
 	if requestorID == targetUserID {
 		return ErrCannotDeleteSelf
 	}
@@ -189,8 +191,13 @@ func (s *userService) DeleteUser(requestorID uint, requestorRole model.UserRole,
 		return ErrUserNotFound
 	}
 
-	// Super admin cannot be deleted
-	if targetUser.Role == model.RoleSuperAdmin {
+	// Admin cannot delete super_admin
+	if requestorRole == model.RoleAdmin && targetUser.Role == model.RoleSuperAdmin {
+		return errors.New("admin cannot delete super admin")
+	}
+
+	// Super admin cannot be deleted (extra safety)
+	if targetUser.Role == model.RoleSuperAdmin && requestorRole != model.RoleSuperAdmin {
 		return ErrCannotDeleteSuperAdmin
 	}
 
