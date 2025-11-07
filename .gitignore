@@ -1,2 +1,4 @@
 .env
 EMAIL_VERIFICATION.md
+.coverage.html
+.coverage.out
