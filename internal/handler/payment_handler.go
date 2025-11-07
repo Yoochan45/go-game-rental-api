@@ -135,22 +135,13 @@ func (h *PaymentHandler) GetPaymentDetail(c echo.Context) error {
 // @Failure 400 {object} map[string]interface{} "Invalid webhook payload"
 // @Router /webhooks/payments [post]
 func (h *PaymentHandler) PaymentWebhook(c echo.Context) error {
-	var req dto.PaymentWebhookRequest
-	if err := c.Bind(&req); err != nil {
+	var webhookData map[string]interface{}
+	if err := c.Bind(&webhookData); err != nil {
 		return myResponse.BadRequest(c, "Invalid webhook payload: "+err.Error())
 	}
-	if err := h.validate.Struct(&req); err != nil {
-		return myResponse.BadRequest(c, "Webhook validation error: "+err.Error())
-	}
 
-	// Handle pointer fields properly
-	var paymentMethod string
-	if req.PaymentMethod != nil {
-		paymentMethod = *req.PaymentMethod
-	}
-
-	// ProcessWebhook takes individual parameters based on actual interface
-	err := h.paymentService.ProcessWebhook(req.ProviderPaymentID, req.Status, paymentMethod, req.FailureReason)
+	// Pass raw data to service (ProcessWebhook expects interface{})
+	err := h.paymentService.ProcessWebhook(webhookData)
 	if err != nil {
 		return myResponse.BadRequest(c, err.Error())
 	}

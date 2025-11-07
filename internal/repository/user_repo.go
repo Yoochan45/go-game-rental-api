@@ -40,7 +40,8 @@ func (r *userRepository) GetByID(id uint) (*model.User, error) {
 
 func (r *userRepository) GetByEmail(email string) (*model.User, error) {
 	var user model.User
-	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
+	err := r.db.Where("email = ?", email).First(&user).Error
+	if err != nil {
 		return nil, err
 	}
 	return &user, nil

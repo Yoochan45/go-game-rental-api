@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"time"
+
 	echomw "github.com/Yoochan45/go-api-utils/pkg-echo/middleware"
 	myRequest "github.com/Yoochan45/go-api-utils/pkg-echo/request"
 	myResponse "github.com/Yoochan45/go-api-utils/pkg-echo/response"
@@ -37,11 +39,6 @@ func NewBookingHandler(bookingService service.BookingService) *BookingHandler {
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Router /bookings [post]
 func (h *BookingHandler) CreateBooking(c echo.Context) error {
-	userID := echomw.CurrentUserID(c)
-	if userID == 0 {
-		return myResponse.Unauthorized(c, "Unauthorized")
-	}
-
 	var req dto.CreateBookingRequest
 	if err := c.Bind(&req); err != nil {
 		return myResponse.BadRequest(c, "Invalid input: "+err.Error())
@@ -50,15 +47,26 @@ func (h *BookingHandler) CreateBooking(c echo.Context) error {
 		return myResponse.BadRequest(c, "Validation error: "+err.Error())
 	}
 
+	// Parse date strings
+	startDate, err := time.Parse("2006-01-02", req.StartDate)
+	if err != nil {
+		return myResponse.BadRequest(c, "Invalid start_date format (use YYYY-MM-DD)")
+	}
+	endDate, err := time.Parse("2006-01-02", req.EndDate)
+	if err != nil {
+		return myResponse.BadRequest(c, "Invalid end_date format (use YYYY-MM-DD)")
+	}
+
+	userID := echomw.CurrentUserID(c)
 	bookingData := &model.Booking{
 		UserID:    userID,
 		GameID:    req.GameID,
-		StartDate: req.StartDate,
-		EndDate:   req.EndDate,
+		StartDate: startDate,
+		EndDate:   endDate,
 		Notes:     utils.PtrOrNil(req.Notes),
 	}
 
-	err := h.bookingService.CreateBooking(userID, bookingData)
+	err = h.bookingService.Create(userID, bookingData)
 	if err != nil {
 		return myResponse.BadRequest(c, err.Error())
 	}
@@ -86,12 +94,12 @@ func (h *BookingHandler) GetMyBookings(c echo.Context) error {
 
 	params := utils.ParsePagination(c)
 
-	bookings, err := h.bookingService.GetUserBookings(userID, params.Limit, params.Offset)
+	bookings, total, err := h.bookingService.GetUserBookings(userID, params.Limit, params.Offset)
 	if err != nil {
 		return myResponse.InternalServerError(c, "Failed to retrieve bookings")
 	}
 
-	meta := utils.CreateMeta(params, int64(len(bookings)))
+	meta := utils.CreateMeta(params, total)
 	return myResponse.Paginated(c, "Bookings retrieved successfully", bookings, meta)
 }
 
@@ -109,7 +117,7 @@ func (h *BookingHandler) GetBookingDetail(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	bookingID := myRequest.PathParamUint(c, "booking_id")
 
-	booking, err := h.bookingService.GetBookingDetail(userID, bookingID)
+	booking, err := h.bookingService.GetByID(userID, bookingID)
 	if err != nil {
 		return myResponse.NotFound(c, err.Error())
 	}
@@ -131,7 +139,7 @@ func (h *BookingHandler) CancelBooking(c echo.Context) error {
 	userID := echomw.CurrentUserID(c)
 	bookingID := myRequest.PathParamUint(c, "booking_id")
 
-	err := h.bookingService.CancelBooking(userID, bookingID)
+	err := h.bookingService.Cancel(userID, bookingID)
 	if err != nil {
 		return utils.MapServiceError(c, err)
 	}
@@ -157,7 +165,7 @@ func (h *BookingHandler) GetAllBookings(c echo.Context) error {
 	params := utils.ParsePagination(c)
 	role := echomw.CurrentRole(c)
 
-	bookings, total, err := h.bookingService.GetAllBookings(model.UserRole(role), params.Limit, params.Offset)
+	bookings, total, err := h.bookingService.GetAll(model.UserRole(role), params.Limit, params.Offset)
 	if err != nil {
 		return utils.MapServiceError(c, err)
 	}
@@ -166,29 +174,38 @@ func (h *BookingHandler) GetAllBookings(c echo.Context) error {
 	return myResponse.Paginated(c, "Bookings retrieved successfully", bookings, meta)
 }
 
-// GetBookingDetailAdmin godoc
-// @Summary Get booking detail (Admin)
-// @Description Get detailed information about a specific booking (Admin only)
+// UpdateBookingStatus godoc
+// @Summary Update booking status
+// @Description Update booking status (Admin only)
 // @Tags Admin - Bookings
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path int true "Booking ID"
-// @Success 200 {object} map[string]interface{} "Booking retrieved successfully"
+// @Param request body object{status=string} true "New status"
+// @Success 200 {object} map[string]interface{} "Booking status updated successfully"
 // @Failure 400 {object} map[string]interface{} "Invalid booking ID"
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Failure 404 {object} map[string]interface{} "Booking not found"
-// @Router /admin/bookings/{id} [get]
-func (h *BookingHandler) GetBookingDetailAdmin(c echo.Context) error {
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /admin/bookings/{id}/status [patch]
+func (h *BookingHandler) UpdateBookingStatus(c echo.Context) error {
 	bookingID := myRequest.PathParamUint(c, "id")
 	if bookingID == 0 {
 		return myResponse.BadRequest(c, "Invalid booking ID")
 	}
 
-	booking, err := h.bookingService.GetBookingDetail(0, bookingID)
-	if err != nil {
-		return myResponse.NotFound(c, err.Error())
+	var req struct {
+		Status model.BookingStatus `json:"status" validate:"required"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return myResponse.BadRequest(c, "Invalid input: "+err.Error())
 	}
 
-	return myResponse.Success(c, "Booking retrieved successfully", booking)
+	role := echomw.CurrentRole(c)
+	err := h.bookingService.UpdateStatus(model.UserRole(role), bookingID, req.Status)
+	if err != nil {
+		return utils.MapServiceError(c, err)
+	}
+
+	return myResponse.Success(c, "Booking status updated successfully", nil)
 }

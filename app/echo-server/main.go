@@ -22,24 +22,24 @@ package main
 
 import (
 	"os"
+	"strings"
 	"time"
 
-	myOrm "github.com/Yoochan45/go-api-utils/pkg-echo/orm"
 	myConfig "github.com/Yoochan45/go-api-utils/pkg/config"
 	"github.com/Yoochan45/go-game-rental-api/app/echo-server/router"
 	_ "github.com/Yoochan45/go-game-rental-api/docs"
 	"github.com/Yoochan45/go-game-rental-api/internal/handler"
-	"github.com/Yoochan45/go-game-rental-api/internal/model"
 	"github.com/Yoochan45/go-game-rental-api/internal/repository"
 	"github.com/Yoochan45/go-game-rental-api/internal/repository/email"
-	"github.com/Yoochan45/go-game-rental-api/internal/repository/storage"
 	"github.com/Yoochan45/go-game-rental-api/internal/repository/transaction"
 	"github.com/Yoochan45/go-game-rental-api/internal/service"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/sirupsen/logrus"
 	echoSwagger "github.com/swaggo/echo-swagger"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func main() {
@@ -54,68 +54,80 @@ func main() {
 		logrus.Warn("Using default JWT secret for development")
 	}
 
-	// Add parameters to avoid prepared statement cache in pooler
-	dbURL := cfg.DatabaseURL + "&statement_cache_mode=describe&prefer_simple_protocol=true"
-	db, err := myOrm.Init(dbURL)
+	// Database connection WITHOUT prepared statements
+	dbURL := cfg.DatabaseURL
+
+	// Parse and modify DSN to disable prepared statements
+	if !strings.Contains(dbURL, "statement_cache_mode") {
+		separator := "?"
+		if strings.Contains(dbURL, "?") {
+			separator = "&"
+		}
+		dbURL = dbURL + separator + "statement_cache_mode=describe&prefer_simple_protocol=true"
+	}
+
+	logrus.Info("Connecting to database with disabled prepared statements...")
+
+	// Use custom GORM config
+	dsn := dbURL
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DSN:                  dsn,
+		PreferSimpleProtocol: true, // disables prepared statements
+	}), &gorm.Config{
+		PrepareStmt:            false, // globally disable prepared statements
+		SkipDefaultTransaction: true,
+		Logger:                 logger.Default.LogMode(logger.Info),
+	})
+
 	if err != nil {
 		logrus.Fatal("Failed to connect to database:", err)
 	}
+	logrus.Info("GORM connected to PostgreSQL (PrepareStmt disabled)")
 
-	// Disable prepared statements completely
-	db = db.Session(&gorm.Session{PrepareStmt: false})
-
-	// Configure connection pool with shorter lifetime to force reconnect
+	// Configure connection pool
 	sqlDB, err := db.DB()
 	if err != nil {
 		logrus.Fatal("Failed to get underlying sql.DB:", err)
 	}
-	sqlDB.SetMaxOpenConns(1)                  // Limit to 1 connection
-	sqlDB.SetMaxIdleConns(0)                  // No idle connections
-	sqlDB.SetConnMaxLifetime(1 * time.Second) // Force reconnect every second
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(0)
+	sqlDB.SetConnMaxLifetime(500 * time.Millisecond)
 
-	// Auto migrate all models
-	err = db.AutoMigrate(
-		&model.User{},
-		&model.EmailVerificationToken{},
-		&model.Category{},
-		&model.Game{},
-		&model.Booking{},
-		&model.Payment{},
-		&model.Review{},
-		&model.PartnerApplication{},
-	)
-	if err != nil {
-		logrus.Warn("Migration warning:", err)
-	}
+	logrus.Info("Database configured: PrepareStmt=false, MaxOpenConns=1")
+
+	// COMMENT OUT AutoMigrate - pakai DDL manual saja
+	/*
+		err = db.AutoMigrate(
+			&model.User{},
+			&model.Category{},
+			&model.Game{},
+			&model.Booking{},
+			&model.Payment{},
+			&model.Review{},
+		)
+		if err != nil {
+			logrus.Warn("Migration warning:", err)
+		}
+	*/
+	logrus.Info("Skipping AutoMigrate - using manual DDL from migrations/ddl.sql")
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
-	verificationRepo := repository.NewEmailVerificationRepository(db)
 	categoryRepo := repository.NewCategoryRepository(db)
 	gameRepo := repository.NewGameRepository(db)
 	bookingRepo := repository.NewBookingRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	reviewRepo := repository.NewReviewRepository(db)
-	partnerRepo := repository.NewPartnerApplicationRepository(db)
 
 	// Initialize 3rd party repositories with fallback to mock
 	var emailRepo email.EmailRepository
-	var storageRepo storage.StorageRepository
 	var transactionRepo transaction.TransactionRepository
 
-	// Try real repositories, fallback to mock on error
 	if repo, err := email.NewSendGridRepository(); err != nil {
 		logrus.Warn("SendGrid failed, using mock:", err)
 		emailRepo = &email.MockEmailRepository{}
 	} else {
 		emailRepo = repo
-	}
-
-	if repo, err := storage.NewSupabaseRepository(); err != nil {
-		logrus.Warn("Supabase failed, using mock:", err)
-		storageRepo = &storage.MockStorageRepository{}
-	} else {
-		storageRepo = repo
 	}
 
 	if repo, err := transaction.NewMidtransRepository(); err != nil {
@@ -126,24 +138,21 @@ func main() {
 	}
 
 	// Initialize services
-	userService := service.NewUserService(userRepo, verificationRepo)
+	userService := service.NewUserService(userRepo)
 	categoryService := service.NewCategoryService(categoryRepo)
-	gameService := service.NewGameService(gameRepo, userRepo)
-	bookingService := service.NewBookingService(bookingRepo, gameRepo, userRepo)
+	gameService := service.NewGameService(gameRepo)
+	bookingService := service.NewBookingService(bookingRepo, gameRepo)
 	paymentService := service.NewPaymentService(paymentRepo, bookingRepo, userRepo, bookingService, transactionRepo)
 	reviewService := service.NewReviewService(reviewRepo, bookingRepo)
-	partnerService := service.NewPartnerApplicationService(partnerRepo, userRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(userService, JwtSecret, emailRepo)
 	userHandler := handler.NewUserHandler(userService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
-	gameHandler := handler.NewGameHandler(gameService, storageRepo)
+	gameHandler := handler.NewGameHandler(gameService)
 	bookingHandler := handler.NewBookingHandler(bookingService)
 	paymentHandler := handler.NewPaymentHandler(paymentService)
 	reviewHandler := handler.NewReviewHandler(reviewService)
-	partnerHandler := handler.NewPartnerHandler(partnerService, bookingService)
-	adminHandler := handler.NewAdminHandler(partnerService, gameService)
 
 	// Setup Echo
 	e := echo.New()
@@ -163,9 +172,6 @@ func main() {
 		bookingHandler,
 		paymentHandler,
 		reviewHandler,
-		partnerHandler,
-		adminHandler,
-
 		JwtSecret,
 	)
 

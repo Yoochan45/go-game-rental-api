@@ -54,35 +54,25 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return myResponse.BadRequest(c, err.Error())
 	}
 
-	// Send email verification with actual token
+	// Send welcome email (no verification needed)
 	go func() {
-		// Get the verification token that was created in Register
-		token, err := h.userService.GetVerificationToken(user.ID)
-		if err != nil {
-			logrus.WithError(err).Error("Failed to get verification token")
-			return
-		}
-
-		verificationURL := fmt.Sprintf("http://localhost:8080/auth/verify?token=%s", token)
-		subject := "Verify Your Email - Game Rental"
+		subject := "Welcome to Game Rental Platform"
 		htmlContent := fmt.Sprintf(`
 			<h1>Welcome %s!</h1>
 			<p>Thank you for registering at Game Rental Platform.</p>
-			<p>Please click the link below to verify your email:</p>
-			<a href="%s">Verify Email</a>
-			<p>This link will expire in 24 hours.</p>
-		`, user.FullName, verificationURL)
-		plainText := "Welcome " + user.FullName + "! Please verify your email by visiting: " + verificationURL
+			<p>Your account is now active and ready to use.</p>
+			<p>Start browsing our game collection and make your first rental!</p>
+		`, user.FullName)
+		plainText := fmt.Sprintf("Welcome %s! Your account is now active.", user.FullName)
 
 		if err := h.emailRepo.SendEmail(c.Request().Context(), user.Email, subject, plainText, htmlContent); err != nil {
-			logrus.WithError(err).Error("Failed to send verification email")
+			logrus.WithError(err).Error("Failed to send welcome email")
 		}
 	}()
 
-	return myResponse.Created(c, "User registered successfully. Please check your email to verify your account.", map[string]interface{}{
+	return myResponse.Created(c, "User registered successfully. You can now login.", map[string]interface{}{
 		"user_id": user.ID,
 		"email":   user.Email,
-		"message": "Verification email sent",
 	})
 }
 
@@ -113,60 +103,4 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	}
 
 	return myResponse.Success(c, "Login successful", response)
-}
-
-// VerifyEmail godoc
-// @Summary Verify email address
-// @Description Verify user email with verification token
-// @Tags Authentication
-// @Accept json
-// @Produce json
-// @Param token query string true "Verification token"
-// @Success 200 {object} map[string]interface{} "Email verified successfully"
-// @Failure 400 {object} map[string]interface{} "Invalid or expired token"
-// @Router /auth/verify [get]
-func (h *AuthHandler) VerifyEmail(c echo.Context) error {
-	token := c.QueryParam("token")
-	if token == "" {
-		return myResponse.BadRequest(c, "Verification token is required")
-	}
-
-	user, err := h.userService.VerifyEmail(token)
-	if err != nil {
-		logrus.WithError(err).Error("Email verification failed")
-		return myResponse.BadRequest(c, err.Error())
-	}
-
-	return myResponse.Success(c, "Email verified successfully. You can now login.", map[string]interface{}{
-		"user_id":  user.ID,
-		"email":    user.Email,
-		"verified": true,
-	})
-}
-
-// ResendVerification godoc
-// @Summary Resend email verification
-// @Description Resend verification email to user
-// @Tags Authentication
-// @Accept json
-// @Produce json
-// @Param request body dto.ResendVerificationRequest true "Email to resend verification"
-// @Success 200 {object} map[string]interface{} "Verification email sent successfully"
-// @Failure 400 {object} map[string]interface{} "Invalid input or user already verified"
-// @Router /auth/resend-verification [post]
-func (h *AuthHandler) ResendVerification(c echo.Context) error {
-	var req dto.ResendVerificationRequest
-	if err := c.Bind(&req); err != nil {
-		return myResponse.BadRequest(c, "Invalid input: "+err.Error())
-	}
-	if err := h.validate.Struct(&req); err != nil {
-		return myResponse.BadRequest(c, "Validation error: "+err.Error())
-	}
-
-	err := h.userService.ResendVerification(req.Email)
-	if err != nil {
-		return myResponse.BadRequest(c, err.Error())
-	}
-
-	return myResponse.Success(c, "Verification email sent successfully", nil)
 }

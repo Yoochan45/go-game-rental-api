@@ -4,17 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
-	"github.com/Yoochan45/go-game-rental-api/internal/repository/transaction"
 	"github.com/Yoochan45/go-game-rental-api/internal/model"
 	"github.com/Yoochan45/go-game-rental-api/internal/repository"
+	"github.com/Yoochan45/go-game-rental-api/internal/repository/transaction"
 )
 
 var (
-	ErrPaymentNotFound      = errors.New("payment not found")
-	ErrPaymentAlreadyExists = errors.New("payment already exists for this booking")
-	ErrPaymentAlreadyPaid   = errors.New("payment already paid")
-	ErrInvalidPaymentAmount = errors.New("invalid payment amount")
+	ErrPaymentNotFound               = errors.New("payment not found")
+	ErrPaymentAlreadyExists          = errors.New("payment already exists for this booking")
+	ErrPaymentBookingNotFound        = errors.New("booking not found")
+	ErrPaymentInvalidStatus          = errors.New("invalid payment status transition")
+	ErrPaymentInsufficientPermission = errors.New("insufficient permission")
 )
 
 type PaymentService interface {
@@ -28,7 +30,7 @@ type PaymentService interface {
 	GetPaymentDetail(requestorRole model.UserRole, paymentID uint) (*model.Payment, error)
 
 	// Webhook/System methods
-	ProcessWebhook(providerPaymentID string, status string, paymentMethod string, failureReason *string) error
+	ProcessWebhook(data interface{}) error
 }
 
 type paymentService struct {
@@ -59,22 +61,21 @@ func (s *paymentService) CreatePayment(userID uint, bookingID uint, provider mod
 	// Get booking and validate ownership
 	booking, err := s.bookingRepo.GetByID(bookingID)
 	if err != nil {
-		return nil, ErrBookingNotFound
+		return nil, ErrPaymentBookingNotFound
 	}
 
 	if booking.UserID != userID {
-		return nil, ErrBookingNotOwned
+		return nil, errors.New("unauthorized")
 	}
 
-	// Check if booking is in pending payment status
-	if booking.Status != model.BookingPendingPayment {
-		return nil, errors.New("booking is not in pending payment status")
+	if booking.Status != model.BookingPending {
+		return nil, errors.New("booking must be in pending status")
 	}
 
 	// Check if payment already exists
 	existingPayment, _ := s.paymentRepo.GetByBookingID(bookingID)
 	if existingPayment != nil {
-		return existingPayment, nil // Return existing payment
+		return nil, ErrPaymentAlreadyExists
 	}
 
 	// Create payment record
@@ -92,7 +93,7 @@ func (s *paymentService) CreatePayment(userID uint, bookingID uint, provider mod
 
 	// Create charge with payment gateway based on provider
 	orderID := fmt.Sprintf("booking-%d", bookingID)
-	
+
 	switch provider {
 	case model.ProviderMidtrans:
 		// Set default payment type if not provided
@@ -110,14 +111,14 @@ func (s *paymentService) CreatePayment(userID uint, bookingID uint, provider mod
 		if err != nil {
 			return payment, fmt.Errorf("midtrans payment gateway error: %w", err)
 		}
-		
+
 		// Update payment with provider transaction ID
 		payment.ProviderPaymentID = &txID
 		s.paymentRepo.Update(payment)
-		
+
 	case model.ProviderStripe:
 		return payment, errors.New("stripe payment provider not implemented yet")
-		
+
 	default:
 		return payment, errors.New("unsupported payment provider")
 	}
@@ -129,11 +130,11 @@ func (s *paymentService) GetPaymentByBooking(userID uint, bookingID uint) (*mode
 	// Validate booking ownership
 	booking, err := s.bookingRepo.GetByID(bookingID)
 	if err != nil {
-		return nil, ErrBookingNotFound
+		return nil, ErrPaymentBookingNotFound
 	}
 
 	if booking.UserID != userID {
-		return nil, ErrBookingNotOwned
+		return nil, errors.New("unauthorized")
 	}
 
 	return s.paymentRepo.GetByBookingID(bookingID)
@@ -141,7 +142,7 @@ func (s *paymentService) GetPaymentByBooking(userID uint, bookingID uint) (*mode
 
 func (s *paymentService) GetAllPayments(requestorRole model.UserRole, limit, offset int) ([]*model.Payment, int64, error) {
 	if !s.canManagePayments(requestorRole) {
-		return nil, 0, ErrInsufficientPermission
+		return nil, 0, ErrPaymentInsufficientPermission
 	}
 
 	payments, err := s.paymentRepo.GetAllPayments(limit, offset)
@@ -155,7 +156,7 @@ func (s *paymentService) GetAllPayments(requestorRole model.UserRole, limit, off
 
 func (s *paymentService) GetPaymentsByStatus(requestorRole model.UserRole, status model.PaymentStatus, limit, offset int) ([]*model.Payment, int64, error) {
 	if !s.canManagePayments(requestorRole) {
-		return nil, 0, ErrInsufficientPermission
+		return nil, 0, ErrPaymentInsufficientPermission
 	}
 
 	payments, err := s.paymentRepo.GetPaymentsByStatus(status, limit, offset)
@@ -169,57 +170,60 @@ func (s *paymentService) GetPaymentsByStatus(requestorRole model.UserRole, statu
 
 func (s *paymentService) GetPaymentDetail(requestorRole model.UserRole, paymentID uint) (*model.Payment, error) {
 	if !s.canManagePayments(requestorRole) {
-		return nil, ErrInsufficientPermission
+		return nil, ErrPaymentInsufficientPermission
 	}
 
 	return s.paymentRepo.GetByIDWithRelations(paymentID)
 }
 
-func (s *paymentService) ProcessWebhook(providerPaymentID string, status string, paymentMethod string, failureReason *string) error {
-	// Find payment by provider payment ID
+func (s *paymentService) ProcessWebhook(data interface{}) error {
+	webhookData, ok := data.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid webhook data")
+	}
+
+	providerPaymentID, ok := webhookData["order_id"].(string)
+	if !ok {
+		return errors.New("missing order_id in webhook")
+	}
+
+	transactionStatus, ok := webhookData["transaction_status"].(string)
+	if !ok {
+		return errors.New("missing transaction_status in webhook")
+	}
+
 	payment, err := s.paymentRepo.GetByProviderPaymentID(providerPaymentID)
 	if err != nil {
 		return ErrPaymentNotFound
 	}
 
-	// Process based on status
-	switch status {
-	case "paid", "success", "completed":
-		if payment.Status == model.PaymentPaid {
-			return nil // Already processed
-		}
-
-		// Mark payment as paid
-		err = s.paymentRepo.MarkAsPaid(payment.ID, providerPaymentID, paymentMethod)
-		if err != nil {
-			return err
-		}
-
-		// Update booking status to confirmed
-		return s.bookingService.ConfirmPayment(payment.BookingID)
-
-	case "failed", "error", "cancelled":
-		if payment.Status == model.PaymentFailed {
-			return nil // Already processed
-		}
-
-		reason := "Payment failed"
-		if failureReason != nil {
-			reason = *failureReason
-		}
-
-		// Mark payment as failed
-		err = s.paymentRepo.MarkAsFailed(payment.ID, reason)
-		if err != nil {
-			return err
-		}
-
-		// Update booking status and release stock
-		return s.bookingService.FailPayment(payment.BookingID)
-
+	var newStatus model.PaymentStatus
+	switch transactionStatus {
+	case "capture", "settlement":
+		newStatus = model.PaymentPaid
+	case "pending":
+		newStatus = model.PaymentPending
+	case "deny", "expire", "cancel":
+		newStatus = model.PaymentFailed
 	default:
-		return fmt.Errorf("unknown payment status: %s", status)
+		return errors.New("unknown transaction status")
 	}
+
+	now := time.Now()
+	switch newStatus {
+	case model.PaymentPaid:
+		payment.PaidAt = &now
+		if err := s.bookingService.ConfirmPayment(payment.BookingID); err != nil {
+			return err
+		}
+	case model.PaymentFailed:
+		if err := s.bookingService.FailPayment(payment.BookingID); err != nil {
+			return err
+		}
+	}
+
+	payment.Status = newStatus
+	return s.paymentRepo.Update(payment)
 }
 
 func (s *paymentService) canManagePayments(role model.UserRole) bool {

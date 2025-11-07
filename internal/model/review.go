@@ -17,7 +17,7 @@ type Review struct {
 	// Relationships
 	Booking Booking `gorm:"foreignKey:BookingID" json:"booking,omitempty"`
 	User    User    `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	Game    Game    `gorm:"foreignKey:GameID" json:"game,omitempty"`
+	Game    Game    `gorm:"foreignKey:GameID" json:"-"`
 }
 
 func (Review) TableName() string {

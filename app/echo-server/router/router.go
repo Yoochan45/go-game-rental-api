@@ -15,15 +15,12 @@ func RegisterRoutes(
 	bookingH *handler.BookingHandler,
 	paymentH *handler.PaymentHandler,
 	reviewH *handler.ReviewHandler,
-	partnerH *handler.PartnerHandler,
-	adminH *handler.AdminHandler,
-
 	jwtSecret string,
 ) {
-	// Public endpoints (no authentication required)
+	// ============= Public Endpoints (No Auth) =============
+	// Auth
 	e.POST("/auth/register", authH.Register)
 	e.POST("/auth/login", authH.Login)
-	e.GET("/auth/verify", authH.VerifyEmail)
 
 	// Public game catalog
 	e.GET("/games", gameH.GetAllGames)
@@ -40,13 +37,12 @@ func RegisterRoutes(
 	// Payment webhook (public but validated by provider)
 	e.POST("/webhooks/payments", paymentH.PaymentWebhook)
 
-	// JWT Middleware Configuration
+	// ============= Protected Routes (Authenticated Users) =============
 	jwtConfig := myMiddleware.JWTConfig{
 		SecretKey:      jwtSecret,
-		UseCustomToken: false, // ubah ke false, kecuali middleware custom kamu butuh true
+		UseCustomToken: false,
 	}
 
-	// Protected routes - require authentication
 	protected := e.Group("")
 	protected.Use(myMiddleware.JWTMiddleware(jwtConfig))
 
@@ -54,56 +50,27 @@ func RegisterRoutes(
 	protected.GET("/users/me", userH.GetMyProfile)
 	protected.PUT("/users/me", userH.UpdateMyProfile)
 
-	// Partner application (customer harus bisa akses)
-	protected.POST("/partner/apply", partnerH.ApplyPartner)
-
 	// Customer bookings
 	protected.POST("/bookings", bookingH.CreateBooking)
 	protected.GET("/bookings/my", bookingH.GetMyBookings)
 	protected.GET("/bookings/:booking_id", bookingH.GetBookingDetail)
 	protected.PATCH("/bookings/:booking_id/cancel", bookingH.CancelBooking)
 
-	// Payments (create & get by booking)
+	// Payments
 	protected.POST("/bookings/:booking_id/payments", paymentH.CreatePayment)
 	protected.GET("/bookings/:booking_id/payments", paymentH.GetPaymentByBooking)
-	// protected.GET("/payments/:id", paymentH.GetPaymentDetail) // moved to admin scope
 
 	// Reviews
 	protected.POST("/bookings/:booking_id/reviews", reviewH.CreateReview)
 
-	// Partner routes (requires partner/admin/super_admin)
-	partner := protected.Group("/partner")
-	partner.Use(myMiddleware.RequireRoles("partner", "admin", "super_admin"))
-	partner.GET("/bookings", partnerH.GetPartnerBookings)
-	partner.PATCH("/bookings/:booking_id/confirm-handover", partnerH.ConfirmHandover)
-	partner.PATCH("/bookings/:booking_id/confirm-return", partnerH.ConfirmReturn)
-	partner.POST("/games", gameH.CreateGame)
-	partner.PUT("/games/:id", gameH.UpdateGame)
-	partner.GET("/games", gameH.GetPartnerGames)
-	partner.POST("/games/:id/upload-image", gameH.UploadGameImage)
-
-	// Admin routes
+	// ============= Admin Routes (Admin & Super Admin) =============
 	admin := protected.Group("/admin")
 	admin.Use(myMiddleware.RequireRoles("admin", "super_admin"))
 
-	// Payment detail (admin only)
-	admin.GET("/payments/:id", paymentH.GetPaymentDetail)
-
-	// User management
-	admin.GET("/users", userH.GetAllUsers)
-	admin.GET("/users/:id", userH.GetUserDetail)
-	admin.PATCH("/users/:id/role", userH.UpdateUserRole)
-	admin.PATCH("/users/:id/status", userH.ToggleUserStatus)
-	admin.DELETE("/users/:id", userH.DeleteUser)
-
-	// Partner application management
-	admin.GET("/partner-applications", adminH.GetPartnerApplications)
-	admin.PATCH("/partner-applications/:id/approve", adminH.ApprovePartnerApplication)
-	admin.PATCH("/partner-applications/:id/reject", adminH.RejectPartnerApplication)
-
-	// Game listing management
-	admin.GET("/listings", adminH.GetGameListings)
-	admin.PATCH("/listings/:id/approve", adminH.ApproveGameListing)
+	// Game management (admin owns games directly)
+	admin.POST("/games", gameH.CreateGame)
+	admin.PUT("/games/:id", gameH.UpdateGame)
+	admin.DELETE("/games/:id", gameH.DeleteGame)
 
 	// Category management
 	admin.POST("/categories", categoryH.CreateCategory)
@@ -112,12 +79,17 @@ func RegisterRoutes(
 
 	// Booking management
 	admin.GET("/bookings", bookingH.GetAllBookings)
+	admin.PATCH("/bookings/:id/status", bookingH.UpdateBookingStatus)
 
 	// Payment management
 	admin.GET("/payments", paymentH.GetAllPayments)
+	admin.GET("/payments/:id", paymentH.GetPaymentDetail)
 	admin.GET("/payments/status", paymentH.GetPaymentsByStatus)
 
-	// Super Admin routes (requires super_admin role only)
-	superAdmin := protected.Group("/superadmin")
-	superAdmin.Use(myMiddleware.RequireRoles("super_admin"))
+	// User management
+	admin.GET("/users", userH.GetAllUsers)
+	admin.GET("/users/:id", userH.GetUserDetail)
+	admin.PATCH("/users/:id/role", userH.UpdateUserRole)
+	admin.PATCH("/users/:id/status", userH.ToggleUserStatus)
+	admin.DELETE("/users/:id", userH.DeleteUser)
 }
